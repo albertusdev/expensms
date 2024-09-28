@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.livedata.observeAsState
 import dagger.hilt.android.AndroidEntryPoint
 
 import dev.albertus.expensms.ui.theme.ExpenSMSTheme
@@ -36,8 +37,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(viewModel: MainViewModel = hiltViewModel()) {
-    val transactions by viewModel.transactions.collectAsState(initial = emptyList())
-    val senderFilter by viewModel.senderFilter.collectAsState(initial = "")
+    val transactions by viewModel.transactions.observeAsState(initial = emptyList())
+    val senderFilter by viewModel.senderFilter.observeAsState(initial = "")
 
     Column {
         SenderFilterInput(

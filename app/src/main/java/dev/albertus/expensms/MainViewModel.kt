@@ -10,24 +10,18 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(private val repository: TransactionRepository) : ViewModel() {
-    private val _transactions = MutableLiveData<List<Transaction>>()
-    val transactions: LiveData<List<Transaction>> = _transactions
+    val transactions: LiveData<List<Transaction>> = repository.getAllTransactions()
 
-    private val _senderFilter = MutableLiveData<String>()
+    private val _senderFilter = MutableLiveData<String>("")
     val senderFilter: LiveData<String> = _senderFilter
-
-    init {
-        loadTransactions()
-    }
-
-    fun loadTransactions() {
-        viewModelScope.launch {
-            _transactions.value = repository.getAllTransactions()
-        }
-    }
 
     fun setSenderFilter(sender: String) {
         _senderFilter.value = sender
-        loadTransactions()
+    }
+
+    fun insertTransaction(transaction: Transaction) {
+        viewModelScope.launch {
+            repository.insertTransaction(transaction)
+        }
     }
 }
