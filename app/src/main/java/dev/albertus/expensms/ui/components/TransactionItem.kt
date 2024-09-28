@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun TransactionItem(transaction: Transaction) {
+fun TransactionItem(transaction: Transaction, isAmountVisible: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -33,7 +33,7 @@ fun TransactionItem(transaction: Transaction) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = transaction.amount.formatAsCurrency(),
+                    text = if (isAmountVisible) transaction.amount.formatAsCurrency() else "****",
                     style = MaterialTheme.typography.titleMedium,
                     color = ExpenseRed
                 )

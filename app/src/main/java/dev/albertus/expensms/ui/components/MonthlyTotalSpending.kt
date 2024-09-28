@@ -16,6 +16,7 @@ fun MonthlyTotalSpending(
     month: YearMonth,
     totalSpending: Double,
     isWideLayout: Boolean,
+    isAmountVisible: Boolean,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -48,7 +49,7 @@ fun MonthlyTotalSpending(
             )
             Spacer(modifier = Modifier.height(if (isWideLayout) 16.dp else 8.dp))
             Text(
-                text = totalSpending.formatAsCurrency(),
+                text = if (isAmountVisible) totalSpending.formatAsCurrency() else "****",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
