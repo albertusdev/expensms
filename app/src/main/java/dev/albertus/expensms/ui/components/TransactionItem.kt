@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.data.model.Transaction
+import dev.albertus.expensms.ui.theme.ExpenseRed
+import dev.albertus.expensms.utils.CurrencyUtils.formatAsCurrency
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -16,7 +18,7 @@ fun TransactionItem(transaction: Transaction) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -31,9 +33,9 @@ fun TransactionItem(transaction: Transaction) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "${transaction.currency} ${transaction.amount}",
+                    text = transaction.amount.formatAsCurrency(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary
+                    color = ExpenseRed
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))

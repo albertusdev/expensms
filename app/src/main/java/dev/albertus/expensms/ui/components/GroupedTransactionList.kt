@@ -10,48 +10,61 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.data.model.Transaction
+import dev.albertus.expensms.ui.theme.ExpenseRed
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import dev.albertus.expensms.utils.CurrencyUtils.formatAsCurrency
 
 @Composable
-fun GroupedTransactionList(groupedTransactions: Map<LocalDate, List<Transaction>>) {
-    LazyColumn {
+fun GroupedTransactionList(
+    groupedTransactions: Map<LocalDate, List<Transaction>>,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(modifier = modifier) {
         groupedTransactions.forEach { (date, transactions) ->
             item {
-                DayHeader(date, transactions)
+                DayHeader(date)
+            }
+            item {
+                DailyTotal(transactions)
             }
             items(transactions) { transaction ->
                 TransactionItem(transaction)
             }
             item {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Divider(Modifier.padding(vertical = 8.dp))
             }
         }
     }
 }
 
 @Composable
-fun DayHeader(date: LocalDate, transactions: List<Transaction>) {
+fun DayHeader(date: LocalDate) {
+    Text(
+        text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")),
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(16.dp)
+    )
+}
+
+@Composable
+fun DailyTotal(transactions: List<Transaction>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            text = "Daily Total",
+            style = MaterialTheme.typography.bodyMedium
         )
         Text(
-            text = "Total: ${transactions.sumOf { it.amount }.formatAsCurrency()}",
+            text = transactions.sumOf { it.amount }.formatAsCurrency(),
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary
+            color = ExpenseRed
         )
     }
-}
-
-fun Double.formatAsCurrency(): String {
-    return String.format("IDR %.2f", this)
 }
