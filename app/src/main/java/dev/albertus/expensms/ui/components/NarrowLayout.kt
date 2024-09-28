@@ -27,6 +27,7 @@ import java.time.YearMonth
 fun NarrowLayout(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
+    filteredTransactions: Map<LocalDate, List<Transaction>>,
     groupedTransactions: Map<LocalDate, List<Transaction>>,
     selectedDate: LocalDate?,
     selectedMonth: YearMonth,
@@ -78,7 +79,7 @@ fun NarrowLayout(
                     }
                     TransactionCalendar(
                         availableDates = groupedTransactions.keys,
-                        onDateSelected = { date -> viewModel.toggleDateSelection(date) },
+                        onDateSelected = { date -> viewModel.selectDate(date) },
                         selectedDate = selectedDate,
                         onMonthChanged = viewModel::setSelectedMonth,
                         modifier = Modifier
@@ -89,7 +90,7 @@ fun NarrowLayout(
             }
         }
 
-        groupedTransactions.forEach { (date, transactions) ->
+        filteredTransactions.forEach { (date, transactions) ->
             item {
                 DayHeader(date)
             }

@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.YearMonth
+import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
 @HiltViewModel
@@ -122,6 +123,7 @@ class MainViewModel @Inject constructor(
     val selectedMonth = _selectedMonth.asStateFlow()
 
     fun setSelectedMonth(month: YearMonth) {
+        _selectedDate.value = null;
         _selectedMonth.value = month
     }
 
@@ -141,16 +143,17 @@ class MainViewModel @Inject constructor(
     }
 
     fun setSelectedDate(date: LocalDate?) {
-        _selectedDate.value = date
-        if (date != null) {
-            setSelectedMonth(YearMonth.from(date))
+        _selectedDate.value = when {
+            date == null -> null
+            _selectedDate.value == null -> date
+            ChronoUnit.DAYS.between(_selectedDate.value, date) == 0L -> null
+            else -> date
         }
     }
 
-    fun toggleDateSelection(date: LocalDate) {
-        _selectedDate.value = if (_selectedDate.value == date) null else date
+    fun selectDate(date: LocalDate) {
+        setSelectedDate(date)
     }
-
 
     fun getMonthlyTotalSpending(): Double {
         return filteredTransactions.value

@@ -15,6 +15,7 @@ fun WideLayout(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
     groupedTransactions: Map<LocalDate, List<Transaction>>,
+    filteredTransactions: Map<LocalDate, List<Transaction>>,
     selectedDate: LocalDate?,
     onDateSelected: (LocalDate) -> Unit,
     selectedMonth: YearMonth,
@@ -26,7 +27,7 @@ fun WideLayout(
         Column(modifier = Modifier.weight(0.4f)) {
             TransactionCalendar(
                 availableDates = groupedTransactions.keys,
-                onDateSelected = { date -> viewModel.toggleDateSelection(date) },
+                onDateSelected = { date -> viewModel.selectDate(date) },
                 selectedDate = selectedDate,
                 onMonthChanged = viewModel::setSelectedMonth,
                 modifier = Modifier.fillMaxWidth()
@@ -41,7 +42,7 @@ fun WideLayout(
             }
         }
         GroupedTransactionList(
-            groupedTransactions = groupedTransactions,
+            groupedTransactions = filteredTransactions,
             modifier = Modifier.weight(0.6f),
             isAmountVisible = isAmountVisible,
             onTransactionClick = onTransactionClick

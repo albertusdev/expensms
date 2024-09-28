@@ -20,7 +20,8 @@ import java.time.YearMonth
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNavigateToSmsDetail: (String) -> Unit) {
-    val groupedTransactions by viewModel.filteredTransactions.collectAsState()
+    val groupedTransactions by viewModel.groupedTransactions.collectAsState()
+    val filteredTransactions by viewModel.filteredTransactions.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val showMonthlyTotal by viewModel.showMonthlyTotal.collectAsState()
@@ -57,8 +58,9 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         modifier = Modifier.padding(paddingValues),
                         viewModel = viewModel,
                         groupedTransactions = groupedTransactions,
+                        filteredTransactions = filteredTransactions,
                         selectedDate = selectedDate,
-                        onDateSelected = { date -> viewModel.toggleDateSelection(date) },
+                        onDateSelected = { date -> viewModel.setSelectedDate(date) },
                         selectedMonth = selectedMonth,
                         showMonthlyTotal = showMonthlyTotal,
                         isAmountVisible = isAmountVisible,
@@ -69,6 +71,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         modifier = Modifier.padding(paddingValues),
                         viewModel = viewModel,
                         groupedTransactions = groupedTransactions,
+                        filteredTransactions = filteredTransactions,
                         selectedDate = selectedDate,
                         selectedMonth = selectedMonth,
                         showMonthlyTotal = showMonthlyTotal,
