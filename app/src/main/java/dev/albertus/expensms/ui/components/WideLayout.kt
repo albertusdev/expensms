@@ -19,7 +19,8 @@ fun WideLayout(
     onDateSelected: (LocalDate) -> Unit,
     selectedMonth: YearMonth,
     showMonthlyTotal: Boolean,
-    isAmountVisible: Boolean
+    isAmountVisible: Boolean,
+    onTransactionClick: (String) -> Unit
 ) {
     Row(modifier = modifier) {
         Column(modifier = Modifier.weight(0.4f)) {
@@ -44,7 +45,8 @@ fun WideLayout(
                 groupedTransactions.filter { it.key == date }
             } ?: groupedTransactions,
             modifier = Modifier.weight(0.6f),
-            isAmountVisible = isAmountVisible
+            isAmountVisible = isAmountVisible,
+            onTransactionClick = onTransactionClick
         )
     }
 }

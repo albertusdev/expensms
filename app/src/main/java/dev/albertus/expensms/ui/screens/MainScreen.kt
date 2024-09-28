@@ -19,13 +19,13 @@ import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
+fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNavigateToSmsDetail: (String) -> Unit) {
     val groupedTransactions by viewModel.groupedTransactions.collectAsState(initial = emptyMap())
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val showMonthlyTotal by viewModel.showMonthlyTotal.collectAsState()
 
-    var isAmountVisible by remember { mutableStateOf(true) }
+    val isAmountVisible by viewModel.isAmountVisible.collectAsState()
 
     ExpenSMSTheme {
         BoxWithConstraints {
@@ -38,7 +38,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
                     TopAppBar(
                         title = { Text("ExpenSMS") },
                         actions = {
-                            IconButton(onClick = { isAmountVisible = !isAmountVisible }) {
+                            IconButton(onClick = { viewModel.setIsAmountVisible(!isAmountVisible) }) {
                                 Icon(
                                     if (isAmountVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                                     contentDescription = "Toggle amount visibility"
@@ -64,7 +64,8 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
                         },
                         selectedMonth = selectedMonth,
                         showMonthlyTotal = showMonthlyTotal,
-                        isAmountVisible = isAmountVisible
+                        isAmountVisible = isAmountVisible,
+                        onTransactionClick = onNavigateToSmsDetail
                     )
                 } else {
                     NarrowLayout(
@@ -79,6 +80,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
                         selectedMonth = selectedMonth,
                         showMonthlyTotal = showMonthlyTotal,
                         isAmountVisible = isAmountVisible,
+                        onTransactionClick = onNavigateToSmsDetail,
                         scrollBehavior = scrollBehavior
                     )
                 }

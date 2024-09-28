@@ -1,5 +1,6 @@
 package dev.albertus.expensms.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,11 +15,16 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun TransactionItem(transaction: Transaction, isAmountVisible: Boolean) {
+fun TransactionItem(
+    transaction: Transaction,
+    isAmountVisible: Boolean,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -40,13 +46,9 @@ fun TransactionItem(transaction: Transaction, isAmountVisible: Boolean) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Card: **** ${transaction.cardLastFourDigits}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Date: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(transaction.date)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(transaction.date),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
         }
     }

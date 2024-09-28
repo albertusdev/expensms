@@ -12,13 +12,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
+import dev.albertus.expensms.ui.screens.ErrorScreen
 import dev.albertus.expensms.ui.screens.MainScreen
 import dev.albertus.expensms.ui.screens.PermissionScreen
 import dev.albertus.expensms.ui.screens.SettingsScreen
+import dev.albertus.expensms.ui.screens.SmsDetailScreen
 import dev.albertus.expensms.ui.theme.ExpenSMSTheme
 import dev.albertus.expensms.ui.viewModels.MainViewModel
 
@@ -59,7 +63,8 @@ class MainActivity : ComponentActivity() {
                         composable("main") {
                             MainScreen(
                                 viewModel = viewModel,
-                                onNavigateToSettings = { navController.navigate("settings") }
+                                onNavigateToSettings = { navController.navigate("settings") },
+                                onNavigateToSmsDetail = { transactionId -> navController.navigate("sms_detail/$transactionId") }
                             )
                         }
                         composable("settings") {
@@ -67,6 +72,25 @@ class MainActivity : ComponentActivity() {
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )
+                        }
+                        composable(
+                            "sms_detail/{transactionId}",
+                            arguments = listOf(navArgument("transactionId") { type = NavType.StringType })
+                        ) { backStackEntry ->
+                            val transactionId = backStackEntry.arguments?.getString("transactionId")
+                            val transaction = viewModel.getTransactionById(transactionId)
+                            if (transaction != null) {
+                                SmsDetailScreen(
+                                    transaction = transaction,
+                                    rawSms = viewModel.getRawSmsForTransaction(transactionId),
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            } else {
+                                ErrorScreen(
+                                    message = "Transaction not found",
+                                    onNavigateBack = { navController.popBackStack() }
+                                )
+                            }
                         }
                     }
                 }

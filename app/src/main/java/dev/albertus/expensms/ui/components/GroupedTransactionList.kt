@@ -2,7 +2,9 @@ package dev.albertus.expensms.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -14,9 +16,11 @@ import java.time.LocalDate
 fun GroupedTransactionList(
     groupedTransactions: Map<LocalDate, List<Transaction>>,
     modifier: Modifier = Modifier,
-    isAmountVisible: Boolean = true
+    isAmountVisible: Boolean = true,
+    onTransactionClick: (String) -> Unit,
+    lazyListState: LazyListState = rememberLazyListState()
 ) {
-    LazyColumn(modifier = modifier) {
+    LazyColumn(modifier = modifier, state = lazyListState) {
         groupedTransactions.forEach { (date, transactions) ->
             item {
                 DayHeader(date)
@@ -25,7 +29,11 @@ fun GroupedTransactionList(
                 DailyTotal(transactions, isAmountVisible = isAmountVisible)
             }
             items(transactions) { transaction ->
-                TransactionItem(transaction, isAmountVisible = isAmountVisible)
+                TransactionItem(
+                    transaction = transaction,
+                    isAmountVisible = isAmountVisible,
+                    onClick = { onTransactionClick(transaction.id) }
+                )
             }
             item {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))

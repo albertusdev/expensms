@@ -140,4 +140,28 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
+    val isAmountVisible: StateFlow<Boolean> = userPreferencesDataStore.data
+        .map { it.isAmountVisible }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), true)
+
+    fun setIsAmountVisible(isVisible: Boolean) {
+        viewModelScope.launch {
+            userPreferencesDataStore.updateData { preferences ->
+                preferences.toBuilder().setIsAmountVisible(isVisible).build()
+            }
+        }
+    }
+
+    fun getTransactionById(transactionId: String?): Transaction? {
+        return transactionId?.let { id ->
+            _transactions.value.find { it.id == id }
+        }
+    }
+
+    fun getRawSmsForTransaction(transactionId: String?): String {
+        return transactionId?.let { id ->
+            _transactions.value.find { it.id == id }?.rawMessage
+        } ?: "Raw SMS not found"
+    }
 }
