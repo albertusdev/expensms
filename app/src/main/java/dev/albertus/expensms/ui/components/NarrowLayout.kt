@@ -29,7 +29,6 @@ fun NarrowLayout(
     viewModel: MainViewModel,
     groupedTransactions: Map<LocalDate, List<Transaction>>,
     selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit,
     selectedMonth: YearMonth,
     showMonthlyTotal: Boolean,
     isAmountVisible: Boolean,
@@ -79,7 +78,7 @@ fun NarrowLayout(
                     }
                     TransactionCalendar(
                         availableDates = groupedTransactions.keys,
-                        onDateSelected = onDateSelected,
+                        onDateSelected = { date -> viewModel.toggleDateSelection(date) },
                         selectedDate = selectedDate,
                         onMonthChanged = viewModel::setSelectedMonth,
                         modifier = Modifier

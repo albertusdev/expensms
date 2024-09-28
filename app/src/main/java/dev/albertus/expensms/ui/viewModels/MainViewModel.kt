@@ -112,6 +112,12 @@ class MainViewModel @Inject constructor(
         return messages
     }
 
+    private val _selectedDate = MutableStateFlow<LocalDate?>(null)
+    val selectedDate: StateFlow<LocalDate?> = _selectedDate.asStateFlow()
+
+    private val _filteredTransactions = MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
+    val filteredTransactions: StateFlow<Map<LocalDate, List<Transaction>>> = _filteredTransactions.asStateFlow()
+
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth = _selectedMonth.asStateFlow()
 
@@ -119,11 +125,35 @@ class MainViewModel @Inject constructor(
         _selectedMonth.value = month
     }
 
-    fun getMonthlyTotalSpending(): Double {
-        return groupedTransactions.value
-            .filter { (date, _) ->
-                YearMonth.from(date) == selectedMonth.value
+    init {
+        viewModelScope.launch {
+            combine(_groupedTransactions, _selectedDate, _selectedMonth) { transactions, selectedDate, selectedMonth ->
+                when {
+                    selectedDate != null -> transactions.filter { it.key == selectedDate }
+                    else -> transactions.filter { (date, _) ->
+                        YearMonth.from(date) == selectedMonth
+                    }
+                }
+            }.collect { filteredTransactions ->
+                _filteredTransactions.value = filteredTransactions
             }
+        }
+    }
+
+    fun setSelectedDate(date: LocalDate?) {
+        _selectedDate.value = date
+        if (date != null) {
+            setSelectedMonth(YearMonth.from(date))
+        }
+    }
+
+    fun toggleDateSelection(date: LocalDate) {
+        _selectedDate.value = if (_selectedDate.value == date) null else date
+    }
+
+
+    fun getMonthlyTotalSpending(): Double {
+        return filteredTransactions.value
             .values
             .flatten()
             .sumOf { it.amount }

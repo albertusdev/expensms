@@ -20,12 +20,12 @@ import java.time.YearMonth
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNavigateToSmsDetail: (String) -> Unit) {
-    val groupedTransactions by viewModel.groupedTransactions.collectAsState(initial = emptyMap())
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    val groupedTransactions by viewModel.filteredTransactions.collectAsState()
+    val selectedDate by viewModel.selectedDate.collectAsState()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val showMonthlyTotal by viewModel.showMonthlyTotal.collectAsState()
-
     val isAmountVisible by viewModel.isAmountVisible.collectAsState()
+
 
     ExpenSMSTheme {
         BoxWithConstraints {
@@ -58,10 +58,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         viewModel = viewModel,
                         groupedTransactions = groupedTransactions,
                         selectedDate = selectedDate,
-                        onDateSelected = { date ->
-                            selectedDate = if (selectedDate == date) null else date
-                            viewModel.setSelectedMonth(YearMonth.from(date))
-                        },
+                        onDateSelected = { date -> viewModel.toggleDateSelection(date) },
                         selectedMonth = selectedMonth,
                         showMonthlyTotal = showMonthlyTotal,
                         isAmountVisible = isAmountVisible,
@@ -73,10 +70,6 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         viewModel = viewModel,
                         groupedTransactions = groupedTransactions,
                         selectedDate = selectedDate,
-                        onDateSelected = { date ->
-                            selectedDate = if (selectedDate == date) null else date
-                            viewModel.setSelectedMonth(YearMonth.from(date))
-                        },
                         selectedMonth = selectedMonth,
                         showMonthlyTotal = showMonthlyTotal,
                         isAmountVisible = isAmountVisible,
