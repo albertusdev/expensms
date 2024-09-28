@@ -12,5 +12,5 @@ interface TransactionDao {
     fun getAllTransactions(): LiveData<List<Transaction>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTransaction(transaction: Transaction)
+    fun insertTransaction(transaction: Transaction)
 }
