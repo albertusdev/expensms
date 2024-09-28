@@ -1,4 +1,4 @@
-package dev.albertus.expensms
+package dev.albertus.expensms.utils
 
 import org.junit.Assert.*
 import org.junit.Test

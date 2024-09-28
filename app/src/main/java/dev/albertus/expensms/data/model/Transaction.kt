@@ -1,4 +1,4 @@
-package dev.albertus.expensms
+package dev.albertus.expensms.data.model
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

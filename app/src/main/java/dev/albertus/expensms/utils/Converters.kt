@@ -1,4 +1,4 @@
-package dev.albertus.expensms
+package dev.albertus.expensms.utils
 
 import androidx.room.TypeConverter
 import java.util.Date

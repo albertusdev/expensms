@@ -6,9 +6,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import dev.albertus.expensms.AppDatabase
-import dev.albertus.expensms.TransactionDao
-import dev.albertus.expensms.TransactionRepository
+import dev.albertus.expensms.data.local.AppDatabase
+import dev.albertus.expensms.data.local.TransactionDao
+import dev.albertus.expensms.data.repository.TransactionRepository
 import javax.inject.Singleton
 
 @Module

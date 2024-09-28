@@ -1,5 +1,6 @@
-package dev.albertus.expensms
+package dev.albertus.expensms.utils
 
+import dev.albertus.expensms.data.model.Transaction
 import java.text.SimpleDateFormat
 import java.util.*
 

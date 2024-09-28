@@ -1,4 +1,4 @@
-package dev.albertus.expensms
+package dev.albertus.expensms.di
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
