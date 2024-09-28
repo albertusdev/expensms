@@ -7,12 +7,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import dev.albertus.expensms.ui.viewModels.MainViewModel
-import dev.albertus.expensms.ui.components.TransactionList
+import dev.albertus.expensms.ui.components.GroupedTransactionList
+import dev.albertus.expensms.ui.components.TransactionCalendar
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
-    val transactions by viewModel.transactions.collectAsState(initial = emptyList())
+    val groupedTransactions by viewModel.groupedTransactions.collectAsState(initial = emptyMap())
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
     Scaffold(
         topBar = {
@@ -27,7 +30,17 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit) {
         }
     ) { paddingValues ->
         Column(modifier = Modifier.padding(paddingValues)) {
-            TransactionList(transactions = transactions)
+            TransactionCalendar(
+                availableDates = groupedTransactions.keys,
+                onDateSelected = { date ->
+                    selectedDate = if (selectedDate == date) null else date
+                }
+            )
+            GroupedTransactionList(
+                groupedTransactions = selectedDate?.let { date ->
+                    groupedTransactions.filter { it.key == date }
+                } ?: groupedTransactions
+            )
         }
     }
 }

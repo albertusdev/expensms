@@ -3,6 +3,7 @@ package dev.albertus.expensms.ui.viewModels
 import android.content.ContentResolver
 import android.database.Cursor
 import android.net.Uri
+import android.util.Log
 import android.provider.Telephony
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
@@ -14,6 +15,8 @@ import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.utils.SmsParser
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 @HiltViewModel
@@ -24,13 +27,13 @@ class MainViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
-    val transactions: StateFlow<List<Transaction>> = _transactions.asStateFlow()
 
     val senderFilter: StateFlow<String> = userPreferencesDataStore.data
         .map { it.senderFilter }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
 
     init {
+        Log.d("MainViewModel", "ViewModel initialized")
         viewModelScope.launch {
             senderFilter.collect {
                 loadSmsMessages()
@@ -46,15 +49,28 @@ class MainViewModel @Inject constructor(
         }
     }
 
+    private val _groupedTransactions = MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
+    val groupedTransactions: StateFlow<Map<LocalDate, List<Transaction>>> = _groupedTransactions.asStateFlow()
+
     fun loadSmsMessages() {
         viewModelScope.launch {
-            val messages = readSmsMessages()
-            val parsedTransactions = messages.mapNotNull { (_, body, timestamp) ->
-                SmsParser.parseTransaction(body, timestamp)
-            }
-            _transactions.value = parsedTransactions
-            parsedTransactions.forEach { transaction ->
-                transactionRepository.insertTransaction(transaction)
+            try {
+                Log.d("MainViewModel", "Loading SMS messages")
+                val messages = readSmsMessages()
+                val parsedTransactions = messages.mapNotNull { (_, body, timestamp) ->
+                    SmsParser.parseTransaction(body, timestamp)
+                }
+                Log.d("MainViewModel", "Parsed ${parsedTransactions.size} transactions")
+                _transactions.value = parsedTransactions
+                _groupedTransactions.value = parsedTransactions.groupBy { transaction ->
+                    transaction.date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+                }.toSortedMap(reverseOrder())
+                parsedTransactions.forEach { transaction ->
+                    transactionRepository.insertTransaction(transaction)
+                }
+                Log.d("MainViewModel", "Transactions loaded and saved")
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error loading SMS messages", e)
             }
         }
     }

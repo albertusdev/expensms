@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.albertus.expensms"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -79,6 +79,9 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // Compose Calendar
+    implementation(libs.compose.calendar)
+
     // Testing
     testImplementation(libs.junit4)
     testImplementation(libs.androidx.arch.core.testing)
@@ -131,4 +134,3 @@ androidComponents {
         }
     }
 }
-
