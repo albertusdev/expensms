@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.YearMonth
 import javax.inject.Inject
 
 @HiltViewModel
@@ -109,5 +110,34 @@ class MainViewModel @Inject constructor(
         }
 
         return messages
+    }
+
+    private val _selectedMonth = MutableStateFlow(YearMonth.now())
+    val selectedMonth = _selectedMonth.asStateFlow()
+
+    fun setSelectedMonth(month: YearMonth) {
+        _selectedMonth.value = month
+    }
+
+    fun getMonthlyTotalSpending(): Double {
+        return groupedTransactions.value
+            .filter { (date, _) ->
+                YearMonth.from(date) == selectedMonth.value
+            }
+            .values
+            .flatten()
+            .sumOf { it.amount }
+    }
+
+    val showMonthlyTotal: StateFlow<Boolean> = userPreferencesDataStore.data
+        .map { it.showMonthlyTotal }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), true)
+
+    fun setShowMonthlyTotal(show: Boolean) {
+        viewModelScope.launch {
+            userPreferencesDataStore.updateData { preferences ->
+                preferences.toBuilder().setShowMonthlyTotal(show).build()
+            }
+        }
     }
 }

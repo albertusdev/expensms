@@ -1,8 +1,6 @@
 package dev.albertus.expensms.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -10,19 +8,6 @@ import androidx.compose.ui.graphics.Color
 val PastelBlue = Color(0xFF7FDBDA)
 val PastelGreen = Color(0xFF98FB98)
 val ExpenseRed = Color(0xFFFF6B6B)
-
-private val LightColors = lightColorScheme(
-    primary = PastelBlue,
-    secondary = PastelGreen,
-    tertiary = ExpenseRed,
-    background = Color.White,
-    surface = Color(0xFFF0F0F0),
-    onPrimary = Color.Black,
-    onSecondary = Color.Black,
-    onTertiary = Color.White,
-    onBackground = Color.Black,
-    onSurface = Color.Black,
-)
 
 private val DarkColors = darkColorScheme(
     primary = PastelBlue,
@@ -39,17 +24,10 @@ private val DarkColors = darkColorScheme(
 
 @Composable
 fun ExpenSMSTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) {
-        DarkColors
-    } else {
-        LightColors
-    }
-
     MaterialTheme(
-        colorScheme = colors,
+        colorScheme = DarkColors,
         typography = Typography,
         content = content
     )

@@ -4,18 +4,22 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.boguszpawlowski.composecalendar.SelectableCalendar
 import io.github.boguszpawlowski.composecalendar.day.DayState
 import io.github.boguszpawlowski.composecalendar.header.MonthState
+import io.github.boguszpawlowski.composecalendar.rememberSelectableCalendarState
 import io.github.boguszpawlowski.composecalendar.selection.DynamicSelectionState
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
@@ -24,14 +28,21 @@ fun TransactionCalendar(
     availableDates: Set<LocalDate>,
     onDateSelected: (LocalDate) -> Unit,
     selectedDate: LocalDate?,
+    onMonthChanged: (YearMonth) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val calendarState = rememberSelectableCalendarState()
+
+    LaunchedEffect(calendarState.monthState.currentMonth) {
+        onMonthChanged(calendarState.monthState.currentMonth)
+    }
+
     Card(
-        modifier = modifier
-            .padding(16.dp)
+        modifier = modifier.padding(16.dp)
     ) {
         SelectableCalendar(
             modifier = Modifier.padding(8.dp),
+            calendarState = calendarState,
             dayContent = { dayState ->
                 CalendarDay(
                     state = dayState,
@@ -41,25 +52,41 @@ fun TransactionCalendar(
                 )
             },
             monthHeader = { monthState ->
-                MonthHeader(monthState)
+                CustomMonthHeader(
+                    monthState = monthState,
+                    onPreviousMonth = { calendarState.monthState.currentMonth = calendarState.monthState.currentMonth.minusMonths(1) },
+                    onNextMonth = { calendarState.monthState.currentMonth = calendarState.monthState.currentMonth.plusMonths(1) }
+                )
             }
         )
     }
 }
 
 @Composable
-fun MonthHeader(monthState: MonthState) {
-    val month = monthState.currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())
-    val year = monthState.currentMonth.year
-    Text(
-        text = "$month $year",
+fun CustomMonthHeader(
+    monthState: MonthState,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
+) {
+    Row(
         modifier = Modifier
-            .padding(vertical = 8.dp)
-            .fillMaxWidth(),
-        textAlign = TextAlign.Center,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface
-    )
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPreviousMonth) {
+            Icon(Icons.AutoMirrored.Default.KeyboardArrowLeft, contentDescription = "Previous month")
+        }
+        Text(
+            text = "${monthState.currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${monthState.currentMonth.year}",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        IconButton(onClick = onNextMonth) {
+            Icon(Icons.AutoMirrored.Default.KeyboardArrowRight, contentDescription = "Next month")
+        }
+    }
 }
 
 @Composable
