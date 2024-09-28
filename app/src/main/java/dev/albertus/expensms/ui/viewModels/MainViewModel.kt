@@ -1,55 +1,83 @@
 package dev.albertus.expensms.ui.viewModels
 
-import android.app.Application
 import android.content.ContentResolver
 import android.database.Cursor
 import android.net.Uri
 import android.provider.Telephony
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.datastore.core.DataStore
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.albertus.expensms.data.UserPreferences
 import dev.albertus.expensms.data.model.Transaction
+import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.utils.SmsParser
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private val _transactions = MutableLiveData<List<Transaction>>()
-    val transactions: LiveData<List<Transaction>> = _transactions
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val userPreferencesDataStore: DataStore<UserPreferences>,
+    private val transactionRepository: TransactionRepository,
+    private val contentResolver: ContentResolver
+) : ViewModel() {
 
-    private val _senderFilter = MutableLiveData("")
-    val senderFilter: LiveData<String> = _senderFilter
+    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
+    val transactions: StateFlow<List<Transaction>> = _transactions.asStateFlow()
+
+    val senderFilter: StateFlow<String> = userPreferencesDataStore.data
+        .map { it.senderFilter }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+
+    init {
+        viewModelScope.launch {
+            senderFilter.collect {
+                loadSmsMessages()
+            }
+        }
+    }
 
     fun setSenderFilter(sender: String) {
-        _senderFilter.value = sender
-        loadSmsMessages()
+        viewModelScope.launch {
+            userPreferencesDataStore.updateData { preferences ->
+                preferences.toBuilder().setSenderFilter(sender).build()
+            }
+        }
     }
 
     fun loadSmsMessages() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             val messages = readSmsMessages()
-            val parsedTransactions = messages.mapNotNull { (sender, body, timestamp) ->
-                if (sender.contains(_senderFilter.value ?: "", ignoreCase = true)) {
-                    SmsParser.parseTransaction(body, timestamp)
-                } else {
-                    null
-                }
+            val parsedTransactions = messages.mapNotNull { (_, body, timestamp) ->
+                SmsParser.parseTransaction(body, timestamp)
             }
-            _transactions.postValue(parsedTransactions)
+            _transactions.value = parsedTransactions
+            parsedTransactions.forEach { transaction ->
+                transactionRepository.insertTransaction(transaction)
+            }
         }
     }
 
     private fun readSmsMessages(): List<Triple<String, String, Long>> {
         val messages = mutableListOf<Triple<String, String, Long>>()
-        val contentResolver: ContentResolver = getApplication<Application>().contentResolver
         val uri: Uri = Telephony.Sms.CONTENT_URI
         val projection = arrayOf(
             Telephony.Sms.ADDRESS,
             Telephony.Sms.BODY,
             Telephony.Sms.DATE
         )
-        val cursor: Cursor? = contentResolver.query(uri, projection, null, null, Telephony.Sms.DEFAULT_SORT_ORDER)
+        val selection = if (senderFilter.value.isNotEmpty())
+            "${Telephony.Sms.ADDRESS} LIKE ?" else null
+        val selectionArgs = if (senderFilter.value.isNotEmpty())
+            arrayOf("%${senderFilter.value}%") else null
+        val cursor: Cursor? = contentResolver.query(
+            uri,
+            projection,
+            selection,
+            selectionArgs,
+            Telephony.Sms.DEFAULT_SORT_ORDER
+        )
 
         cursor?.use {
             val senderIndex = it.getColumnIndex(Telephony.Sms.ADDRESS)

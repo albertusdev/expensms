@@ -1,9 +1,12 @@
+import com.google.protobuf.gradle.GenerateProtoTask
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.protobuf)
 }
 
 android {
@@ -57,6 +60,10 @@ dependencies {
     implementation(libs.core.ktx)
     ksp(libs.androidx.room.compiler)
 
+    // Proto DataStore
+    api(libs.androidx.dataStore)
+    implementation(libs.protobuf.kotlin.lite)
+
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
 
@@ -88,3 +95,40 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+// Setup protobuf configuration, generating lite Java and Kotlin classes
+protobuf {
+    protoc {
+        artifact = libs.protobuf.protoc.get().toString()
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins.apply {
+                register("java") {
+                    option("lite")
+                }
+                register("kotlin") {
+                    option("lite")
+                }
+            }
+        }
+    }
+}
+
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        afterEvaluate {
+            val protoTask =
+                project.tasks.getByName("generate" + variant.name.replaceFirstChar { it.uppercaseChar() } + "Proto") as GenerateProtoTask
+
+            project.tasks.getByName("ksp" + variant.name.replaceFirstChar { it.uppercaseChar() } + "Kotlin") {
+                dependsOn(protoTask)
+                (this as org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompileTool<*>).setSource(
+                    protoTask.outputBaseDir
+                )
+            }
+        }
+    }
+}
+

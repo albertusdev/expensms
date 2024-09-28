@@ -7,15 +7,22 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import dagger.hilt.android.AndroidEntryPoint
 import dev.albertus.expensms.ui.screens.MainScreen
 import dev.albertus.expensms.ui.screens.PermissionScreen
+import dev.albertus.expensms.ui.screens.SettingsScreen
 import dev.albertus.expensms.ui.theme.ExpenSMSTheme
 import dev.albertus.expensms.ui.viewModels.MainViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private lateinit var permissionState: MutableState<Boolean>
     private val viewModel: MainViewModel by viewModels()
@@ -29,18 +36,37 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ExpenSMSTheme {
                 permissionState = remember { mutableStateOf(checkPermission()) }
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    if (permissionState.value) {
-                        MainScreen(viewModel)
-                    } else {
-                        PermissionScreen(
-                            onRequestPermission = { requestSmsPermission() }
-                        )
+                val navController = rememberNavController()
+
+                Scaffold { paddingValues ->
+                    NavHost(
+                        navController = navController,
+                        startDestination = if (permissionState.value) "main" else "permission",
+                        modifier = Modifier.padding(paddingValues)
+                    ) {
+                        composable("permission") {
+                            PermissionScreen(
+                                onRequestPermission = { requestSmsPermission() }
+                            )
+                        }
+                        composable("main") {
+                            MainScreen(
+                                viewModel = viewModel,
+                                onNavigateToSettings = { navController.navigate("settings") }
+                            )
+                        }
+                        composable("settings") {
+                            SettingsScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
                     }
                 }
             }
