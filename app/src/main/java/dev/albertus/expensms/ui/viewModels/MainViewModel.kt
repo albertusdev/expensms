@@ -13,6 +13,7 @@ import dev.albertus.expensms.data.UserPreferences
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.utils.SmsParser
+import dev.albertus.expensms.data.SupportedBank
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -30,45 +31,66 @@ class MainViewModel @Inject constructor(
 
     private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
 
-    val senderFilter: StateFlow<String> = userPreferencesDataStore.data
-        .map { it.senderFilter }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
+    val enabledBanks: StateFlow<Map<String, Boolean>> = userPreferencesDataStore.data
+        .map { it.enabledBanksMap }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyMap())
 
     init {
         Log.d("MainViewModel", "ViewModel initialized")
         viewModelScope.launch {
-            senderFilter.collect {
+            enabledBanks.collect {
                 loadSmsMessages()
             }
         }
     }
 
-    fun setSenderFilter(sender: String) {
+    fun setEnabledBank(bank: SupportedBank, enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesDataStore.updateData { preferences ->
-                preferences.toBuilder().setSenderFilter(sender).build()
+                preferences.toBuilder()
+                    .putEnabledBanks(bank.name, enabled)
+                    .build()
             }
         }
     }
 
-    private val _groupedTransactions = MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
-    val groupedTransactions: StateFlow<Map<LocalDate, List<Transaction>>> = _groupedTransactions.asStateFlow()
+    private val _groupedTransactions =
+        MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
+    val groupedTransactions: StateFlow<Map<LocalDate, List<Transaction>>> =
+        _groupedTransactions.asStateFlow()
 
     fun loadSmsMessages() {
         viewModelScope.launch {
             try {
                 Log.d("MainViewModel", "Loading SMS messages")
                 val messages = readSmsMessages()
+                val enabledBankNames = enabledBanks.value.filter { it.value }.keys
+
+                // Clear out transactions for disabled banks
+                _transactions.value = _transactions.value.filter { transaction ->
+                    SupportedBank.entries.find { it.name == transaction.bank }?.let { bank ->
+                        enabledBankNames.contains(bank.name)
+                    } ?: false
+                }
+
                 val parsedTransactions = messages.mapNotNull { (_, body, timestamp) ->
                     SmsParser.parseTransaction(body, timestamp)
+                }.filter { transaction ->
+                    enabledBankNames.contains(transaction.bank)
                 }
+
                 Log.d("MainViewModel", "Parsed ${parsedTransactions.size} transactions")
-                _transactions.value = parsedTransactions
-                _groupedTransactions.value = parsedTransactions.groupBy { transaction ->
+                _transactions.value =
+                    (_transactions.value + parsedTransactions).distinctBy { it.id }
+                _groupedTransactions.value = _transactions.value.groupBy { transaction ->
                     transaction.date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
                 }.toSortedMap(reverseOrder())
+
+                // Only insert new transactions
                 parsedTransactions.forEach { transaction ->
-                    transactionRepository.insertTransaction(transaction)
+                    if (!_transactions.value.any { it.id == transaction.id }) {
+                        transactionRepository.insertTransaction(transaction)
+                    }
                 }
                 Log.d("MainViewModel", "Transactions loaded and saved")
             } catch (e: Exception) {
@@ -85,10 +107,24 @@ class MainViewModel @Inject constructor(
             Telephony.Sms.BODY,
             Telephony.Sms.DATE
         )
-        val selection = if (senderFilter.value.isNotEmpty())
-            "${Telephony.Sms.ADDRESS} LIKE ?" else null
-        val selectionArgs = if (senderFilter.value.isNotEmpty())
-            arrayOf("%${senderFilter.value}%") else null
+
+        val enabledBankFilters = enabledBanks.value
+            .filter { it.value }
+            .keys
+            .map { SupportedBank.valueOf(it).senderFilter }
+
+        val selection = if (enabledBankFilters.isNotEmpty()) {
+            enabledBankFilters.joinToString(" OR ") { "${Telephony.Sms.ADDRESS} LIKE ?" }
+        } else {
+            null
+        }
+
+        val selectionArgs = if (enabledBankFilters.isNotEmpty()) {
+            enabledBankFilters.map { "%$it%" }.toTypedArray()
+        } else {
+            null
+        }
+
         val cursor: Cursor? = contentResolver.query(
             uri,
             projection,
@@ -116,8 +152,10 @@ class MainViewModel @Inject constructor(
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
     val selectedDate: StateFlow<LocalDate?> = _selectedDate.asStateFlow()
 
-    private val _filteredTransactions = MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
-    val filteredTransactions: StateFlow<Map<LocalDate, List<Transaction>>> = _filteredTransactions.asStateFlow()
+    private val _filteredTransactions =
+        MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
+    val filteredTransactions: StateFlow<Map<LocalDate, List<Transaction>>> =
+        _filteredTransactions.asStateFlow()
 
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth = _selectedMonth.asStateFlow()
@@ -129,7 +167,11 @@ class MainViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            combine(_groupedTransactions, _selectedDate, _selectedMonth) { transactions, selectedDate, selectedMonth ->
+            combine(
+                _groupedTransactions,
+                _selectedDate,
+                _selectedMonth
+            ) { transactions, selectedDate, selectedMonth ->
                 when {
                     selectedDate != null -> transactions.filter { it.key == selectedDate }
                     else -> transactions.filter { (date, _) ->

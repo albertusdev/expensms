@@ -93,6 +93,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.inline)
+    testImplementation(libs.mockito.kotlin)
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.work.testing)
 
@@ -102,6 +103,7 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
 }
 
 // Setup protobuf configuration, generating lite Java and Kotlin classes
