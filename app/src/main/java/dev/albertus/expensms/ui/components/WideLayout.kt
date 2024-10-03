@@ -21,7 +21,8 @@ fun WideLayout(
     selectedMonth: YearMonth,
     showMonthlyTotal: Boolean,
     isAmountVisible: Boolean,
-    onTransactionClick: (String) -> Unit
+    onTransactionClick: (String) -> Unit,
+    transactionCounts: Map<LocalDate, Int>
 ) {
     Row(modifier = modifier) {
         Column(modifier = Modifier.weight(0.4f)) {
@@ -30,7 +31,8 @@ fun WideLayout(
                 onDateSelected = { date -> viewModel.selectDate(date) },
                 selectedDate = selectedDate,
                 onMonthChanged = viewModel::setSelectedMonth,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                transactionCounts = transactionCounts
             )
             if (showMonthlyTotal) {
                 MonthlyTotalSpending(

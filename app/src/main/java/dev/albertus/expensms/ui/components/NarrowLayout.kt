@@ -34,7 +34,8 @@ fun NarrowLayout(
     showMonthlyTotal: Boolean,
     isAmountVisible: Boolean,
     onTransactionClick: (String) -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior
+    scrollBehavior: TopAppBarScrollBehavior,
+    transactionCounts: Map<LocalDate, Int>
 ) {
     val headerHeight = if (showMonthlyTotal) 450.dp else 350.dp
     val headerHeightPx = with(LocalDensity.current) { headerHeight.toPx() }
@@ -84,7 +85,8 @@ fun NarrowLayout(
                         onMonthChanged = viewModel::setSelectedMonth,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .weight(1f),
+                        transactionCounts = transactionCounts
                     )
                 }
             }

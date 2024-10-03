@@ -45,6 +45,9 @@ class MainViewModel @Inject constructor(
     private val _groupedTransactions = MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
     val groupedTransactions: StateFlow<Map<LocalDate, List<Transaction>>> = _groupedTransactions.asStateFlow()
 
+    private val _transactionCounts = MutableStateFlow<Map<LocalDate, Int>>(emptyMap())
+    val transactionCounts: StateFlow<Map<LocalDate, Int>> = _transactionCounts.asStateFlow()
+
     init {
         viewModelScope.launch {
             enabledBanks.collect {
@@ -88,9 +91,12 @@ class MainViewModel @Inject constructor(
     }
 
     private fun updateGroupedTransactions(transactionList: List<Transaction>) {
-        _groupedTransactions.value = transactionList.groupBy { transaction ->
+        val grouped = transactionList.groupBy { transaction ->
             transaction.date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
         }.toSortedMap(reverseOrder())
+        
+        _groupedTransactions.value = grouped
+        _transactionCounts.value = grouped.mapValues { it.value.size }
     }
 
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)

@@ -27,6 +27,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
     val showMonthlyTotal by viewModel.showMonthlyTotal.collectAsState()
     val isAmountVisible by viewModel.isAmountVisible.collectAsState()
     val loadingProgress by viewModel.loadingProgress.collectAsState()
+    val transactionCounts by viewModel.transactionCounts.collectAsState()
 
     ExpenSMSTheme {
         BoxWithConstraints {
@@ -78,7 +79,8 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         selectedMonth = selectedMonth,
                         showMonthlyTotal = showMonthlyTotal,
                         isAmountVisible = isAmountVisible,
-                        onTransactionClick = onNavigateToSmsDetail
+                        onTransactionClick = onNavigateToSmsDetail,
+                        transactionCounts = transactionCounts
                     )
                 } else {
                     NarrowLayout(
@@ -91,10 +93,13 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         showMonthlyTotal = showMonthlyTotal,
                         isAmountVisible = isAmountVisible,
                         onTransactionClick = onNavigateToSmsDetail,
-                        scrollBehavior = scrollBehavior
+                        scrollBehavior = scrollBehavior,
+                        transactionCounts = transactionCounts
                     )
                 }
             }
         }
     }
 }
+
+

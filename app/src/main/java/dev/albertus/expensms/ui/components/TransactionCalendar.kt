@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.boguszpawlowski.composecalendar.SelectableCalendar
 import io.github.boguszpawlowski.composecalendar.day.DayState
@@ -26,6 +27,7 @@ import java.util.Locale
 @Composable
 fun TransactionCalendar(
     availableDates: Set<LocalDate>,
+    transactionCounts: Map<LocalDate, Int>,
     onDateSelected: (LocalDate) -> Unit,
     selectedDate: LocalDate?,
     onMonthChanged: (YearMonth) -> Unit,
@@ -48,7 +50,8 @@ fun TransactionCalendar(
                     state = dayState,
                     isAvailable = availableDates.contains(dayState.date),
                     onDateSelected = onDateSelected,
-                    isSelected = dayState.date == selectedDate
+                    isSelected = dayState.date == selectedDate,
+                    transactionCount = transactionCounts[dayState.date] ?: 0
                 )
             },
             monthHeader = { monthState ->
@@ -89,41 +92,82 @@ fun CustomMonthHeader(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarDay(
     state: DayState<DynamicSelectionState>,
     isAvailable: Boolean,
     onDateSelected: (LocalDate) -> Unit,
-    isSelected: Boolean
+    isSelected: Boolean,
+    transactionCount: Int
 ) {
     val date = state.date
+    val tooltipState = rememberTooltipState()
+    var showTooltip by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .aspectRatio(1f)
-            .padding(2.dp)
-            .clip(CircleShape)
-            .background(
-                when {
-                    isSelected -> MaterialTheme.colorScheme.primary
-                    isAvailable -> MaterialTheme.colorScheme.primaryContainer
-                    else -> MaterialTheme.colorScheme.surface
+    LaunchedEffect(showTooltip) {
+        if (showTooltip) {
+            tooltipState.show()
+            showTooltip = false
+        }
+    }
+
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text("Transactions: $transactionCount")
+            }
+        },
+        state = tooltipState
+    ) {
+        Box(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .padding(2.dp)
+                .clip(CircleShape)
+                .background(
+                    when {
+                        isSelected -> MaterialTheme.colorScheme.primary
+                        isAvailable -> getHeatMapColor(transactionCount)
+                        else -> MaterialTheme.colorScheme.surface
+                    }
+                )
+                .clickable(
+                    enabled = isAvailable,
+                    onClick = { 
+                        onDateSelected(date)
+                        showTooltip = true
+                    }
+                )
+        ) {
+            Text(
+                text = date.dayOfMonth.toString(),
+                modifier = Modifier.align(Alignment.Center),
+                style = MaterialTheme.typography.bodySmall,
+                color = when {
+                    isSelected -> MaterialTheme.colorScheme.onPrimary
+                    isAvailable -> MaterialTheme.colorScheme.onPrimaryContainer
+                    else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                 }
             )
-            .clickable(
-                enabled = isAvailable,
-                onClick = { onDateSelected(date) }
-            )
-    ) {
-        Text(
-            text = date.dayOfMonth.toString(),
-            modifier = Modifier.align(Alignment.Center),
-            style = MaterialTheme.typography.bodySmall,
-            color = when {
-                isSelected -> MaterialTheme.colorScheme.onPrimary
-                isAvailable -> MaterialTheme.colorScheme.onPrimaryContainer
-                else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-            }
-        )
+        }
     }
+}
+
+@Composable
+fun getHeatMapColor(transactionCount: Int): Color {
+    val baseColor = MaterialTheme.colorScheme.primaryContainer
+    
+    // Adjust these thresholds based on your app's typical transaction counts
+    val alpha = when {
+        transactionCount == 0 -> 0.0f
+        transactionCount == 1 -> 0.2f
+        transactionCount == 2 -> 0.4f
+        transactionCount == 3 -> 0.6f
+        transactionCount == 4 -> 0.8f
+        else -> 1.0f
+    }
+    
+    return baseColor.copy(alpha = alpha)
 }
