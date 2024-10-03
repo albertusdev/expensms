@@ -12,9 +12,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.albertus.expensms.data.UserPreferences
 import dev.albertus.expensms.data.local.AppDatabase
+import dev.albertus.expensms.data.local.SyncMetadataDao
 import dev.albertus.expensms.data.local.TransactionDao
 import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.data.serializer.UserPreferencesSerializer
+import dev.albertus.expensms.utils.SmsSync
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,14 +66,29 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTransactionRepository(transactionDao: TransactionDao): TransactionRepository {
-        return TransactionRepository(transactionDao)
+    fun provideTransactionRepository(transactionDao: TransactionDao, syncMetadataDao: SyncMetadataDao): TransactionRepository {
+        return TransactionRepository(transactionDao, syncMetadataDao)
     }
 
     @Provides
     @Singleton
     fun provideTransactionDao(database: AppDatabase): TransactionDao {
         return database.transactionDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSyncMetadataDao(database: AppDatabase): SyncMetadataDao {
+        return database.syncMetadataDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSmsSync(
+        contentResolver: ContentResolver,
+        transactionRepository: TransactionRepository
+    ): SmsSync {
+        return SmsSync(contentResolver, transactionRepository)
     }
 
     @Provides

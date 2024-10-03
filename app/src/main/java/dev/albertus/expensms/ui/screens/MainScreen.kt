@@ -26,7 +26,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
     val selectedMonth by viewModel.selectedMonth.collectAsState()
     val showMonthlyTotal by viewModel.showMonthlyTotal.collectAsState()
     val isAmountVisible by viewModel.isAmountVisible.collectAsState()
-
+    val loadingProgress by viewModel.loadingProgress.collectAsState()
 
     ExpenSMSTheme {
         BoxWithConstraints {
@@ -36,23 +36,37 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
             Scaffold(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 topBar = {
-                    TopAppBar(
-                        title = { Text("ExpenSMS") },
-                        actions = {
-                            IconButton(onClick = { viewModel.setIsAmountVisible(!isAmountVisible) }) {
-                                Icon(
-                                    if (isAmountVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = "Toggle amount visibility"
-                                )
-                            }
-                            IconButton(onClick = onNavigateToSettings) {
-                                Icon(Icons.Default.Settings, contentDescription = "Settings")
-                            }
-                        },
-                        scrollBehavior = scrollBehavior
-                    )
+                    Column {
+                        TopAppBar(
+                            title = { Text("ExpenSMS") },
+                            actions = {
+                                IconButton(onClick = { viewModel.setIsAmountVisible(!isAmountVisible) }) {
+                                    Icon(
+                                        if (isAmountVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                        contentDescription = "Toggle amount visibility"
+                                    )
+                                }
+                                IconButton(onClick = onNavigateToSettings) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                                }
+                            },
+                            scrollBehavior = scrollBehavior
+                        )
+                        // Add LinearProgressIndicator here, directly under the TopAppBar
+                        if (loadingProgress < 1f) {
+                            LinearProgressIndicator(
+                                progress = { loadingProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(4.dp),
+                                color = MaterialTheme.colorScheme.secondary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        }
+                    }
                 }
             ) { paddingValues ->
+                // Existing layout content
                 if (isWideLayout) {
                     WideLayout(
                         modifier = Modifier.padding(paddingValues),

@@ -34,7 +34,7 @@ object SmsParser {
         }
     }
 
-    private fun parseTransactionForBank(bank: SupportedBank, body: String, timestamp: Long): Transaction? {
+    fun parseTransactionForBank(bank: SupportedBank, body: String, timestamp: Long): Transaction? {
         val matchResult = bank.regex.find(body)
         if (matchResult == null) {
             logger.d(TAG, "No match found for ${bank.name} regex in body: $body")

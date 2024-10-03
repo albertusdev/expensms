@@ -1,49 +1,60 @@
 package dev.albertus.expensms.ui.viewModels
 
-import android.content.ContentResolver
-import android.database.Cursor
-import android.net.Uri
-import android.util.Log
-import android.provider.Telephony
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.albertus.expensms.data.SupportedBank
 import dev.albertus.expensms.data.UserPreferences
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.data.repository.TransactionRepository
-import dev.albertus.expensms.utils.SmsParser
-import dev.albertus.expensms.data.SupportedBank
-import kotlinx.coroutines.flow.*
+import dev.albertus.expensms.utils.CurrencyUtils
+import dev.albertus.expensms.utils.SmsSync
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.YearMonth
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
-import android.icu.util.Currency
-import android.icu.util.CurrencyAmount
-import dev.albertus.expensms.utils.CurrencyUtils
 import javax.money.MonetaryAmount
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val userPreferencesDataStore: DataStore<UserPreferences>,
     private val transactionRepository: TransactionRepository,
-    private val contentResolver: ContentResolver
+    private val smsSync: SmsSync
 ) : ViewModel() {
-
-    private val _transactions = MutableStateFlow<List<Transaction>>(emptyList())
 
     val enabledBanks: StateFlow<Map<String, Boolean>> = userPreferencesDataStore.data
         .map { it.enabledBanksMap }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyMap())
 
+    private val _loadingProgress = MutableStateFlow(0f)
+    val loadingProgress: StateFlow<Float> = _loadingProgress.asStateFlow()
+
+    val transactions: StateFlow<List<Transaction>> = transactionRepository.getAllTransactions()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    private val _groupedTransactions = MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
+    val groupedTransactions: StateFlow<Map<LocalDate, List<Transaction>>> = _groupedTransactions.asStateFlow()
+
     init {
-        Log.d("MainViewModel", "ViewModel initialized")
         viewModelScope.launch {
             enabledBanks.collect {
-                loadSmsMessages()
+                syncSmsMessages()
+            }
+        }
+
+        viewModelScope.launch {
+            transactions.collect { transactionList ->
+                updateGroupedTransactions(transactionList)
             }
         }
     }
@@ -58,99 +69,28 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private val _groupedTransactions =
-        MutableStateFlow<Map<LocalDate, List<Transaction>>>(emptyMap())
-    val groupedTransactions: StateFlow<Map<LocalDate, List<Transaction>>> =
-        _groupedTransactions.asStateFlow()
-
-    fun loadSmsMessages() {
+    private fun syncSmsMessages() {
         viewModelScope.launch {
             try {
-                Log.d("MainViewModel", "Loading SMS messages")
-                val messages = readSmsMessages()
+                _loadingProgress.value = 0f
                 val enabledBankNames = enabledBanks.value.filter { it.value }.keys
+                val enabledBanks = SupportedBank.entries.filter { enabledBankNames.contains(it.name) }
 
-                // Clear out transactions for disabled banks
-                _transactions.value = _transactions.value.filter { transaction ->
-                    SupportedBank.entries.find { it.name == transaction.bank }?.let { bank ->
-                        enabledBankNames.contains(bank.name)
-                    } ?: false
+                smsSync.syncSmsMessages(enabledBanks) { progress ->
+                    _loadingProgress.value = progress
                 }
-
-                val parsedTransactions = messages.mapNotNull { (_, body, timestamp) ->
-                    SmsParser.parseTransaction(body, timestamp)
-                }.filter { transaction ->
-                    enabledBankNames.contains(transaction.bank)
-                }
-
-                Log.d("MainViewModel", "Parsed ${parsedTransactions.size} transactions")
-                _transactions.value =
-                    (_transactions.value + parsedTransactions).distinctBy { it.id }
-                _groupedTransactions.value = _transactions.value.groupBy { transaction ->
-                    transaction.date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-                }.toSortedMap(reverseOrder())
-
-                // Only insert new transactions
-                parsedTransactions.forEach { transaction ->
-                    if (!_transactions.value.any { it.id == transaction.id }) {
-                        transactionRepository.insertTransaction(transaction)
-                    }
-                }
-                Log.d("MainViewModel", "Transactions loaded and saved")
             } catch (e: Exception) {
-                Log.e("MainViewModel", "Error loading SMS messages", e)
+                // Handle error
+            } finally {
+                _loadingProgress.value = 1f
             }
         }
     }
 
-    private fun readSmsMessages(): List<Triple<String, String, Long>> {
-        val messages = mutableListOf<Triple<String, String, Long>>()
-        val uri: Uri = Telephony.Sms.CONTENT_URI
-        val projection = arrayOf(
-            Telephony.Sms.ADDRESS,
-            Telephony.Sms.BODY,
-            Telephony.Sms.DATE
-        )
-
-        val enabledBankFilters = enabledBanks.value
-            .filter { it.value }
-            .keys
-            .map { SupportedBank.valueOf(it).senderFilter }
-
-        val selection = if (enabledBankFilters.isNotEmpty()) {
-            enabledBankFilters.joinToString(" OR ") { "${Telephony.Sms.ADDRESS} LIKE ?" }
-        } else {
-            null
-        }
-
-        val selectionArgs = if (enabledBankFilters.isNotEmpty()) {
-            enabledBankFilters.map { "%$it%" }.toTypedArray()
-        } else {
-            null
-        }
-
-        val cursor: Cursor? = contentResolver.query(
-            uri,
-            projection,
-            selection,
-            selectionArgs,
-            Telephony.Sms.DEFAULT_SORT_ORDER
-        )
-
-        cursor?.use {
-            val senderIndex = it.getColumnIndex(Telephony.Sms.ADDRESS)
-            val bodyIndex = it.getColumnIndex(Telephony.Sms.BODY)
-            val dateIndex = it.getColumnIndex(Telephony.Sms.DATE)
-
-            while (it.moveToNext()) {
-                val sender = it.getString(senderIndex)
-                val body = it.getString(bodyIndex)
-                val timestamp = it.getLong(dateIndex)
-                messages.add(Triple(sender, body, timestamp))
-            }
-        }
-
-        return messages
+    private fun updateGroupedTransactions(transactionList: List<Transaction>) {
+        _groupedTransactions.value = transactionList.groupBy { transaction ->
+            transaction.date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        }.toSortedMap(reverseOrder())
     }
 
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)
@@ -237,13 +177,19 @@ class MainViewModel @Inject constructor(
 
     fun getTransactionById(transactionId: String?): Transaction? {
         return transactionId?.let { id ->
-            _transactions.value.find { it.id == id }
+            transactions.value.find { it.id == id }
         }
     }
 
     fun getRawSmsForTransaction(transactionId: String?): String {
         return transactionId?.let { id ->
-            _transactions.value.find { it.id == id }?.rawMessage
+            transactions.value.find { it.id == id }?.rawMessage
         } ?: "Raw SMS not found"
+    }
+
+    fun loadSmsMessages() {
+        viewModelScope.launch {
+            syncSmsMessages()
+        }
     }
 }
