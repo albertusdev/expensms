@@ -43,6 +43,25 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    testOptions {
+       unitTests {
+          isIncludeAndroidResources = true
+       }
+    }
+
+    packaging {
+        resources {
+            pickFirsts += listOf(
+                "javamoney.properties",
+                "META-INF/NOTICE.md"
+            )
+            excludes += listOf(
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE-notice.md"
+            )
+        }
+    }
 }
 
 dependencies {
@@ -55,8 +74,6 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.compose.runtime.livedata)
-
-
 
     // Room
     implementation(libs.androidx.room.runtime)
@@ -87,8 +104,14 @@ dependencies {
     // Compose Calendar
     implementation(libs.compose.calendar)
 
+    // JavaMoney
+    implementation(libs.javax.money.api)
+    implementation(libs.java.money.moneta)
+
+
     // Testing
-    testImplementation(libs.junit4)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.junit.jupiter.params)
     testImplementation(libs.androidx.arch.core.testing)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mockito.core)
@@ -96,7 +119,9 @@ dependencies {
     testImplementation(libs.mockito.kotlin)
     testImplementation(libs.androidx.room.testing)
     testImplementation(libs.androidx.work.testing)
+    testImplementation(libs.robolectric)
 
+    androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
@@ -125,7 +150,6 @@ protobuf {
     }
 }
 
-
 androidComponents {
     onVariants(selector().all()) { variant ->
         afterEvaluate {
@@ -140,4 +164,8 @@ androidComponents {
             }
         }
     }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.Date
+import javax.money.MonetaryAmount
 
 @Entity(tableName = "transactions")
 data class Transaction(
@@ -13,6 +14,6 @@ data class Transaction(
     @ColumnInfo(name = "date") val date: Date,
     @ColumnInfo(name = "merchant") val merchant: String,
     @ColumnInfo(name = "amount") val amount: Double,
-    @ColumnInfo(name = "currency") val currency: String,
-    @ColumnInfo(name = "rawMessage") val rawMessage: String
+    @ColumnInfo(name = "rawMessage") val rawMessage: String,
+    @ColumnInfo(name = "money") val money: MonetaryAmount,
 )

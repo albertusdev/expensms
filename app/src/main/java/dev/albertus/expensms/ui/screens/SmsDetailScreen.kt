@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.data.model.Transaction
-import dev.albertus.expensms.utils.CurrencyUtils.formatAsCurrency
+import dev.albertus.expensms.utils.CurrencyUtils.format
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -44,7 +44,7 @@ fun SmsDetailScreen(transaction: Transaction, rawSms: String, onNavigateBack: ()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Merchant: ${transaction.merchant}")
-                    Text("Amount: ${transaction.amount.formatAsCurrency()}")
+                    Text("Amount: ${transaction.money.format()}")
                     Text("Card: **** ${transaction.cardLastFourDigits}")
                     Text("Date: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(transaction.date)}")
                 }
