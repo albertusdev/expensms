@@ -21,7 +21,6 @@ hiltNavigationCompose = "1.0.0"
 javaMoneyMoneta = "1.4.4"
 javaxMoneyApi = "1.1"
 junit5 = "5.10.2"
-jodaMoney = "1.0.5"
 kotlin = "2.0.20"
 kotlinVersion = "2.0.20"
 kotlinxCoroutines = "1.9.0"
@@ -89,7 +88,6 @@ java-money-moneta = { group = "org.javamoney", name = "moneta", version.ref = "j
 javax-money-api = { group = "javax.money", name = "money-api", version.ref = "javaxMoneyApi" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
 junit-jupiter-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit5" }
-joda-money = { group = "org.joda", name = "joda-money", version.ref = "jodaMoney" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8", version.ref = "kotlin" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
