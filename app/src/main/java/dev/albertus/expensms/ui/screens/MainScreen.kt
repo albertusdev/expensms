@@ -7,13 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.ui.viewModels.MainViewModel
 import dev.albertus.expensms.ui.theme.ExpenSMSTheme
 import dev.albertus.expensms.ui.components.NarrowLayout
 import dev.albertus.expensms.ui.components.WideLayout
+import dev.albertus.expensms.ui.components.DeleteConfirmationDialog
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -28,6 +28,10 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
     val isAmountVisible by viewModel.isAmountVisible.collectAsState()
     val loadingProgress by viewModel.loadingProgress.collectAsState()
     val transactionCounts by viewModel.transactionCounts.collectAsState()
+    val deleteMode by viewModel.deleteMode.collectAsState()
+    val selectedTransactions by viewModel.selectedTransactions.collectAsState()
+
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     ExpenSMSTheme {
         BoxWithConstraints {
@@ -41,10 +45,23 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         TopAppBar(
                             title = { Text("ExpenSMS") },
                             actions = {
-                                IconButton(onClick = { viewModel.setIsAmountVisible(!isAmountVisible) }) {
+                                if (deleteMode) {
+                                    Text("${selectedTransactions.size} selected")
+                                    IconButton(onClick = { showDeleteConfirmation = true }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete selected")
+                                    }
+                                } else {
+                                    IconButton(onClick = { viewModel.setIsAmountVisible(!isAmountVisible) }) {
+                                        Icon(
+                                            if (isAmountVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                            contentDescription = "Toggle amount visibility"
+                                        )
+                                    }
+                                }
+                                IconButton(onClick = { viewModel.toggleDeleteMode() }) {
                                     Icon(
-                                        if (isAmountVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                        contentDescription = "Toggle amount visibility"
+                                        if (deleteMode) Icons.Default.Close else Icons.Default.Delete,
+                                        contentDescription = "Toggle delete mode"
                                     )
                                 }
                                 IconButton(onClick = onNavigateToSettings) {
@@ -80,7 +97,10 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         showMonthlyTotal = showMonthlyTotal,
                         isAmountVisible = isAmountVisible,
                         onTransactionClick = onNavigateToSmsDetail,
-                        transactionCounts = transactionCounts
+                        transactionCounts = transactionCounts,
+                        deleteMode = deleteMode,
+                        selectedTransactions = selectedTransactions,
+                        onTransactionSelect = viewModel::toggleTransactionSelection
                     )
                 } else {
                     NarrowLayout(
@@ -94,9 +114,23 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         isAmountVisible = isAmountVisible,
                         onTransactionClick = onNavigateToSmsDetail,
                         scrollBehavior = scrollBehavior,
-                        transactionCounts = transactionCounts
+                        transactionCounts = transactionCounts,
+                        deleteMode = deleteMode,
+                        selectedTransactions = selectedTransactions,
+                        onTransactionSelect = viewModel::toggleTransactionSelection
                     )
                 }
+            }
+
+            if (showDeleteConfirmation) {
+                DeleteConfirmationDialog(
+                    count = selectedTransactions.size,
+                    onConfirm = {
+                        viewModel.deleteSelectedTransactions()
+                        showDeleteConfirmation = false
+                    },
+                    onDismiss = { showDeleteConfirmation = false }
+                )
             }
         }
     }

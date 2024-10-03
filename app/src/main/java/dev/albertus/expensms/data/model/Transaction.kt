@@ -16,4 +16,10 @@ data class Transaction(
     @ColumnInfo(name = "amount") val amount: Double,
     @ColumnInfo(name = "rawMessage") val rawMessage: String,
     @ColumnInfo(name = "money") val money: MonetaryAmount,
+    @ColumnInfo(name = "status") val status: TransactionStatus = TransactionStatus.ACTIVE
 )
+
+enum class TransactionStatus {
+    ACTIVE,
+    IGNORED
+}

@@ -43,6 +43,7 @@ fun TransactionCalendar(
         modifier = modifier.padding(16.dp)
     ) {
         SelectableCalendar(
+            showAdjacentMonths = false,
             modifier = Modifier.padding(8.dp),
             calendarState = calendarState,
             dayContent = { dayState ->

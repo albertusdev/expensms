@@ -35,7 +35,10 @@ fun NarrowLayout(
     isAmountVisible: Boolean,
     onTransactionClick: (String) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
-    transactionCounts: Map<LocalDate, Int>
+    transactionCounts: Map<LocalDate, Int>,
+    deleteMode: Boolean,
+    selectedTransactions: Set<String>,
+    onTransactionSelect: (String) -> Unit
 ) {
     val headerHeight = if (showMonthlyTotal) 450.dp else 350.dp
     val headerHeightPx = with(LocalDensity.current) { headerHeight.toPx() }
@@ -103,7 +106,10 @@ fun NarrowLayout(
                 TransactionItem(
                     transaction = transaction,
                     isAmountVisible = isAmountVisible,
-                    onClick = { onTransactionClick(transaction.id) }
+                    onClick = { onTransactionClick(transaction.id) },
+                    deleteMode = deleteMode,
+                    isSelected = selectedTransactions.contains(transaction.id),
+                    onSelect = onTransactionSelect
                 )
             }
         }

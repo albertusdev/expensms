@@ -22,7 +22,10 @@ fun WideLayout(
     showMonthlyTotal: Boolean,
     isAmountVisible: Boolean,
     onTransactionClick: (String) -> Unit,
-    transactionCounts: Map<LocalDate, Int>
+    transactionCounts: Map<LocalDate, Int>,
+    deleteMode: Boolean,
+    selectedTransactions: Set<String>,
+    onTransactionSelect: (String) -> Unit
 ) {
     Row(modifier = modifier) {
         Column(modifier = Modifier.weight(0.4f)) {
@@ -47,7 +50,10 @@ fun WideLayout(
             groupedTransactions = filteredTransactions,
             modifier = Modifier.weight(0.6f),
             isAmountVisible = isAmountVisible,
-            onTransactionClick = onTransactionClick
+            onTransactionClick = onTransactionClick,
+            deleteMode = deleteMode,
+            selectedTransactions = selectedTransactions,
+            onTransactionSelect = onTransactionSelect
         )
     }
 }
