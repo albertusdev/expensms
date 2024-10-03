@@ -23,6 +23,8 @@ import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 import android.icu.util.Currency
 import android.icu.util.CurrencyAmount
+import dev.albertus.expensms.utils.CurrencyUtils
+import javax.money.MonetaryAmount
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -199,18 +201,13 @@ class MainViewModel @Inject constructor(
         setSelectedDate(date)
     }
 
-    fun getMonthlyTotalSpending(): Map<Currency, CurrencyAmount> {
+    fun getMonthlyTotalSpending(): Map<String, MonetaryAmount> {
         return filteredTransactions.value
             .values
             .flatten()
-            .groupBy { it.currency }
+            .groupBy { it.money.currency.currencyCode }
             .mapValues { (currency, transactions) ->
-                CurrencyAmount(
-                    transactions.sumOf {
-                        it.amount
-                    },
-                    currency
-                )
+                CurrencyUtils.sumAmounts(transactions)
             }
     }
 

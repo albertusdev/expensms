@@ -11,11 +11,12 @@ import dev.albertus.expensms.utils.CurrencyUtils.format
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import android.icu.util.CurrencyAmount
+import javax.money.MonetaryAmount
 
 @Composable
 fun MonthlyTotalSpending(
     month: YearMonth,
-    totalSpending: Map<android.icu.util.Currency, CurrencyAmount>,
+    totalSpending: Map<String, MonetaryAmount>,
     isWideLayout: Boolean,
     isAmountVisible: Boolean,
     modifier: Modifier = Modifier

@@ -9,10 +9,11 @@ import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.ui.theme.ExpenseRed
 import dev.albertus.expensms.utils.CurrencyUtils
+import dev.albertus.expensms.utils.CurrencyUtils.format
 
 @Composable
 fun DailyTotal(transactions: List<Transaction>, isAmountVisible: Boolean) {
-    val groupedByCurrency = transactions.groupBy { it.currency }
+    val groupedByCurrency = transactions.groupBy { it.money.currency.currencyCode }
     
     Column(
         modifier = Modifier
@@ -30,17 +31,13 @@ fun DailyTotal(transactions: List<Transaction>, isAmountVisible: Boolean) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = currency.currencyCode,
+                    text = currency,
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
-                    text = if (isAmountVisible)
-                        CurrencyUtils.format(
-                            currency.currencyCode,
-                            transactions.sumOf {
-                                it.amount
+                    text = if (isAmountVisible) {
+                                CurrencyUtils.sumAmounts(transactionsForCurrency).format()
                             }
-                        )
                     else "****",
                     style = MaterialTheme.typography.titleSmall,
                     color = ExpenseRed

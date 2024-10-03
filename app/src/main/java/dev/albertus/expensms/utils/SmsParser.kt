@@ -71,9 +71,9 @@ object SmsParser {
             cardLastFourDigits = cardLastFourDigits,
             date = date,
             merchant = merchant.trim(),
-            currencyCode = currencyStr,
             amount = amount.number.toDouble(),
-            rawMessage = body
+            rawMessage = body,
+            money = amount
         )
     }
 }
