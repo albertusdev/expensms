@@ -21,6 +21,8 @@ import java.time.ZoneId
 import java.time.YearMonth
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
+import android.icu.util.Currency
+import android.icu.util.CurrencyAmount
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -161,7 +163,7 @@ class MainViewModel @Inject constructor(
     val selectedMonth = _selectedMonth.asStateFlow()
 
     fun setSelectedMonth(month: YearMonth) {
-        _selectedDate.value = null;
+        _selectedDate.value = null
         _selectedMonth.value = month
     }
 
@@ -197,11 +199,19 @@ class MainViewModel @Inject constructor(
         setSelectedDate(date)
     }
 
-    fun getMonthlyTotalSpending(): Double {
+    fun getMonthlyTotalSpending(): Map<Currency, CurrencyAmount> {
         return filteredTransactions.value
             .values
             .flatten()
-            .sumOf { it.amount }
+            .groupBy { it.currency }
+            .mapValues { (currency, transactions) ->
+                CurrencyAmount(
+                    transactions.sumOf {
+                        it.amount
+                    },
+                    currency
+                )
+            }
     }
 
     val showMonthlyTotal: StateFlow<Boolean> = userPreferencesDataStore.data

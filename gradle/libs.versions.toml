@@ -3,6 +3,10 @@ activityCompose = "1.8.0"
 androidGradlePlugin = "8.6.1"
 androidTools = "31.6.1"
 androidxDataStore = "1.0.0"
+androidxTestCore = "1.5.0"
+androidxTestExt = "1.2.1"
+androidxTestRules = "1.6.1"
+androidxTestRunner = "1.6.2"
 archCoreTesting = "2.2.0"
 compose = "1.7.2"
 composeBom = "2024.04.01"
@@ -14,8 +18,10 @@ googleOss = "17.0.1"
 googleOssPlugin = "0.10.6"
 hilt = "2.52"
 hiltNavigationCompose = "1.0.0"
-junit = "4.13.2"
-junitVersion = "1.1.5"
+javaMoneyMoneta = "1.4.4"
+javaxMoneyApi = "1.1"
+junit5 = "5.10.2"
+jodaMoney = "1.0.5"
 kotlin = "2.0.20"
 kotlinVersion = "2.0.20"
 kotlinxCoroutines = "1.9.0"
@@ -30,6 +36,7 @@ mockitoCore = "5.14.0"
 mockitoKotlin = "5.4.0"
 mockitoInline = "5.2.0"
 protobuf = "4.26.1"
+robolectric = "4.13"
 protobufPlugin = "0.9.4"
 room = "2.6.1"
 work = "2.8.1"
@@ -61,7 +68,9 @@ androidx-room-compiler = { group = "androidx.room", name = "room-compiler", vers
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-testing = { group = "androidx.room", name = "room-testing", version.ref = "room" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
 androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version = "espressoCore" }
+androidx-test-ext = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "androidxTestExt" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
@@ -76,8 +85,11 @@ google-oss-licenses = { group = "com.google.android.gms", name = "play-services-
 google-oss-licenses-plugin = { group = "com.google.android.gms", name = "oss-licenses-plugin", version.ref = "googleOssPlugin" }
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-junit4 = { group = "junit", name = "junit", version = "4.13.2" }
+java-money-moneta = { group = "org.javamoney", name = "moneta", version.ref = "javaMoneyMoneta" }
+javax-money-api = { group = "javax.money", name = "money-api", version.ref = "javaxMoneyApi" }
+junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit5" }
+junit-jupiter-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit5" }
+joda-money = { group = "org.joda", name = "joda-money", version.ref = "jodaMoney" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib-jdk8", version.ref = "kotlin" }
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
@@ -91,7 +103,7 @@ mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", versio
 mockito-inline = { group = "org.mockito", name = "mockito-inline", version.ref = "mockitoInline" }
 protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
 protobuf-protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCoreVersion" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

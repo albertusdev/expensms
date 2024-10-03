@@ -3,8 +3,6 @@ package dev.albertus.expensms.utils
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.data.SupportedBank
 import java.util.*
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 interface Logger {
     fun d(tag: String, message: String)
@@ -21,6 +19,7 @@ class AndroidLogger : Logger {
     }
 }
 
+
 object SmsParser {
     private const val TAG = "SmsParser"
     private var logger: Logger = AndroidLogger()
@@ -30,7 +29,7 @@ object SmsParser {
     }
 
     fun parseTransaction(body: String, timestamp: Long): Transaction? {
-        return SupportedBank.values().firstNotNullOfOrNull { bank ->
+        return SupportedBank.entries.firstNotNullOfOrNull { bank ->
             parseTransactionForBank(bank, body, timestamp)
         }
     }
@@ -46,8 +45,9 @@ object SmsParser {
         val dateStr = matchResult.groups["date"]?.value
         val merchant = matchResult.groups["merchant"]?.value
         val amountStr = matchResult.groups["amount"]?.value
+        val currencyStr = matchResult.groups["currency"]?.value
 
-        if (cardNumber == null || dateStr == null || merchant == null || amountStr == null) {
+        if (cardNumber == null || dateStr == null || merchant == null || amountStr == null || currencyStr == null) {
             logger.d(TAG, "One or more groups not found in regex match for ${bank.name}")
             return null
         }
@@ -59,7 +59,7 @@ object SmsParser {
             return null
         }
 
-        val amount = bank.parseAmount(amountStr)
+        val amount = CurrencyUtils.parse(currencyStr, amountStr)
         if (amount == null) {
             logger.d(TAG, "Failed to parse amount: $amountStr for ${bank.name}")
             return null
@@ -71,8 +71,8 @@ object SmsParser {
             cardLastFourDigits = cardLastFourDigits,
             date = date,
             merchant = merchant.trim(),
-            amount = amount,
-            currency = "IDR",
+            currencyCode = currencyStr,
+            amount = amount.number.toDouble(),
             rawMessage = body
         )
     }

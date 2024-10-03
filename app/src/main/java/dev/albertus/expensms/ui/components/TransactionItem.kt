@@ -10,7 +10,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.ui.theme.ExpenseRed
-import dev.albertus.expensms.utils.CurrencyUtils.formatAsCurrency
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,7 +38,7 @@ fun TransactionItem(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (isAmountVisible) transaction.amount.formatAsCurrency() else "****",
+                    text = if (isAmountVisible) transaction.formattedAmountWithCurrency else "****",
                     style = MaterialTheme.typography.titleMedium,
                     color = ExpenseRed
                 )

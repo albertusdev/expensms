@@ -7,14 +7,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import dev.albertus.expensms.utils.CurrencyUtils.formatAsCurrency
+import dev.albertus.expensms.utils.CurrencyUtils.format
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import android.icu.util.CurrencyAmount
 
 @Composable
 fun MonthlyTotalSpending(
     month: YearMonth,
-    totalSpending: Double,
+    totalSpending: Map<android.icu.util.Currency, CurrencyAmount>,
     isWideLayout: Boolean,
     isAmountVisible: Boolean,
     modifier: Modifier = Modifier
@@ -48,12 +49,14 @@ fun MonthlyTotalSpending(
                 color = MaterialTheme.colorScheme.onSecondaryContainer
             )
             Spacer(modifier = Modifier.height(if (isWideLayout) 16.dp else 8.dp))
-            Text(
-                text = if (isAmountVisible) totalSpending.formatAsCurrency() else "****",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
+            totalSpending.forEach { (_, amount) ->
+                Text(
+                    text = if (isAmountVisible) amount.format() else "****",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }
