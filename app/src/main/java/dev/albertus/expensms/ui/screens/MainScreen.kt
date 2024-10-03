@@ -19,7 +19,7 @@ import java.time.YearMonth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNavigateToSmsDetail: (String) -> Unit) {
+fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNavigateToSmsDetail: (String) -> Unit, onOpenDrawer: () -> Unit) {
     val groupedTransactions by viewModel.groupedTransactions.collectAsState()
     val filteredTransactions by viewModel.filteredTransactions.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
@@ -41,46 +41,49 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
             Scaffold(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 topBar = {
-                    Column {
-                        TopAppBar(
-                            title = { Text("ExpenSMS") },
-                            actions = {
-                                if (deleteMode) {
-                                    Text("${selectedTransactions.size} selected")
-                                    IconButton(onClick = { showDeleteConfirmation = true }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete selected")
-                                    }
-                                } else {
-                                    IconButton(onClick = { viewModel.setIsAmountVisible(!isAmountVisible) }) {
-                                        Icon(
-                                            if (isAmountVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                            contentDescription = "Toggle amount visibility"
-                                        )
-                                    }
+                    TopAppBar(
+                        title = { Text("ExpenSMS") },
+                        navigationIcon = {
+                            IconButton(onClick = onOpenDrawer) {
+                                Icon(Icons.Default.Menu, contentDescription = "Open menu")
+                            }
+                        },
+                        actions = {
+                            if (deleteMode) {
+                                Text("${selectedTransactions.size} selected")
+                                IconButton(onClick = { showDeleteConfirmation = true }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete selected")
                                 }
-                                IconButton(onClick = { viewModel.toggleDeleteMode() }) {
+                            } else {
+                                IconButton(onClick = { viewModel.setIsAmountVisible(!isAmountVisible) }) {
                                     Icon(
-                                        if (deleteMode) Icons.Default.Close else Icons.Default.Delete,
-                                        contentDescription = "Toggle delete mode"
+                                        if (isAmountVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                                        contentDescription = "Toggle amount visibility"
                                     )
                                 }
-                                IconButton(onClick = onNavigateToSettings) {
-                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
-                                }
-                            },
-                            scrollBehavior = scrollBehavior
+                            }
+                            IconButton(onClick = { viewModel.toggleDeleteMode() }) {
+                                Icon(
+                                    if (deleteMode) Icons.Default.Close else Icons.Default.Delete,
+                                    contentDescription = "Toggle delete mode"
+                                )
+                            }
+                            IconButton(onClick = onNavigateToSettings) {
+                                Icon(Icons.Default.Settings, contentDescription = "Settings")
+                            }
+                        },
+                        scrollBehavior = scrollBehavior
+                    )
+                    // Add LinearProgressIndicator here, directly under the TopAppBar
+                    if (loadingProgress < 1f) {
+                        LinearProgressIndicator(
+                            progress = { loadingProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp),
+                            color = MaterialTheme.colorScheme.secondary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
-                        // Add LinearProgressIndicator here, directly under the TopAppBar
-                        if (loadingProgress < 1f) {
-                            LinearProgressIndicator(
-                                progress = { loadingProgress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(4.dp),
-                                color = MaterialTheme.colorScheme.secondary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        }
                     }
                 }
             ) { paddingValues ->

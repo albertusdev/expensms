@@ -38,4 +38,8 @@ class TransactionRepository @Inject constructor(
             syncMetadataDao.updateLastSyncTimestamp(timestamp)
         }
     }
+
+    fun getIgnoredTransactions(): Flow<List<Transaction>> {
+        return transactionDao.getAllTransactionsFlow(status = TransactionStatus.IGNORED)
+    }
 }

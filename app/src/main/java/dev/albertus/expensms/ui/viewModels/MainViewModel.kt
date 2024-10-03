@@ -226,4 +226,14 @@ class MainViewModel @Inject constructor(
             _deleteMode.value = false
         }
     }
+
+    val ignoredTransactions: StateFlow<List<Transaction>> = transactionRepository.getIgnoredTransactions()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun restoreSelectedTransactions() {
+        viewModelScope.launch {
+            transactionRepository.updateTransactionStatus(_selectedTransactions.value.toList(), TransactionStatus.ACTIVE)
+            _selectedTransactions.value = emptySet()
+        }
+    }
 }
