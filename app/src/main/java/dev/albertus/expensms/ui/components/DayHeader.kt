@@ -8,13 +8,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
+
+import dev.albertus.expensms.utils.DateUtils.formatToReadable
 
 @Composable
 fun DayHeader(date: LocalDate) {
     Text(
-        text = date.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy")),
-        style = MaterialTheme.typography.titleMedium,
+        text = date.formatToReadable(),
+        style = MaterialTheme.typography.titleLarge,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(16.dp)
     )

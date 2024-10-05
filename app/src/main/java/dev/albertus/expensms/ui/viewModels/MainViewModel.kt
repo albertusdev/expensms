@@ -188,12 +188,6 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun getRawSmsForTransaction(transactionId: String?): String {
-        return transactionId?.let { id ->
-            transactions.value.find { it.id == id }?.rawMessage
-        } ?: "Raw SMS not found"
-    }
-
     fun loadSmsMessages() {
         viewModelScope.launch {
             syncSmsMessages()

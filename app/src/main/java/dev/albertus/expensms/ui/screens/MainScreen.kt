@@ -108,7 +108,6 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                     NarrowLayout(
                         modifier = Modifier.padding(paddingValues),
                         props = layoutProps,
-                        scrollBehavior = scrollBehavior
                     )
                 }
             }

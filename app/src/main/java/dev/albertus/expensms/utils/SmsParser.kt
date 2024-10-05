@@ -2,6 +2,9 @@ package dev.albertus.expensms.utils
 
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.data.SupportedBank
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.*
 
 interface Logger {
@@ -34,7 +37,19 @@ object SmsParser {
         }
     }
 
-    fun parseTransactionForBank(bank: SupportedBank, body: String, timestamp: Long): Transaction? {
+    private fun mixDateAndTime(date: Date, time: Date): Date {
+        // Convert Date to LocalDate and LocalTime
+        val localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        val localTime = time.toInstant().atZone(ZoneId.systemDefault()).toLocalTime()
+
+        // Combine LocalDate and LocalTime to LocalDateTime
+        val combinedDateTime = LocalDateTime.of(localDate, localTime)
+
+        // Convert LocalDateTime back to Date
+        return Date.from(combinedDateTime.atZone(ZoneId.systemDefault()).toInstant())
+    }
+
+    private fun parseTransactionForBank(bank: SupportedBank, body: String, timestamp: Long): Transaction? {
         val matchResult = bank.regex.find(body)
         if (matchResult == null) {
             logger.d(TAG, "No match found for ${bank.name} regex in body: $body")
@@ -53,11 +68,15 @@ object SmsParser {
         }
 
         val cardLastFourDigits = cardNumber.takeLast(4)
-        val date = bank.parseDate(dateStr)
-        if (date == null) {
+        val parsedDate = bank.parseDate(dateStr)
+        val smsTimestamp = Date.from(Instant.ofEpochMilli(timestamp))
+
+
+        if (parsedDate == null) {
             logger.d(TAG, "Failed to parse date: $dateStr for ${bank.name}")
             return null
         }
+        val date = mixDateAndTime(parsedDate, smsTimestamp)
 
         val amount = CurrencyUtils.parse(currencyStr, amountStr)
         if (amount == null) {

@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.ui.theme.ExpenseRed
 import dev.albertus.expensms.utils.CurrencyUtils.format
+import dev.albertus.expensms.utils.DateUtils.formatToTimeOnly
 
 @Composable
 fun TransactionItem(
@@ -46,23 +47,33 @@ fun TransactionItem(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = transaction.merchant,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = if (isAmountVisible) transaction.money.format() else "****",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = ExpenseRed
-                    )
+                    Column {
+                        Text(
+                            text = transaction.merchant,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = transaction.bank,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = if (isAmountVisible) transaction.money.format() else "****",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = ExpenseRed
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = transaction.date.formatToTimeOnly(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = transaction.date.toString(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
             }
         }
     }
