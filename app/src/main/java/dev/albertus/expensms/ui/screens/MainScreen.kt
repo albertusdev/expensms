@@ -14,6 +14,8 @@ import dev.albertus.expensms.ui.components.NarrowLayout
 import dev.albertus.expensms.ui.components.WideLayout
 import dev.albertus.expensms.ui.components.DeleteConfirmationDialog
 import dev.albertus.expensms.ui.props.LayoutProps
+import dev.albertus.expensms.ui.model.SelectionMode
+import androidx.compose.material.icons.filled.FileDownload
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +30,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
     val transactionCounts by viewModel.transactionCounts.collectAsState()
     val deleteMode by viewModel.deleteMode.collectAsState()
     val selectedTransactions by viewModel.selectedTransactions.collectAsState()
+    val selectionMode by viewModel.selectionMode.collectAsState()
 
     var showDeleteConfirmation by remember { mutableStateOf(false) }
 
@@ -96,6 +99,15 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                             color = MaterialTheme.colorScheme.secondary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
+                    }
+                },
+                floatingActionButton = {
+                    if (selectionMode == SelectionMode.EXPORT_CSV && selectedTransactions.isNotEmpty()) {
+                        FloatingActionButton(
+                            onClick = { /* TODO: Implement CSV export */ }
+                        ) {
+                            Icon(Icons.Default.FileDownload, contentDescription = "Export to CSV")
+                        }
                     }
                 }
             ) { paddingValues ->
