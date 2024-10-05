@@ -9,7 +9,7 @@ import dev.albertus.expensms.data.model.SyncMetadata
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.utils.Converters
 
-@Database(entities = [Transaction::class, SyncMetadata::class], version = 2, exportSchema = true)
+@Database(entities = [Transaction::class, SyncMetadata::class], version = 3, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao

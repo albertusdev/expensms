@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.albertus.expensms.data.SupportedBank
 import dev.albertus.expensms.data.UserPreferences
 import dev.albertus.expensms.data.model.Transaction
+import dev.albertus.expensms.data.model.TransactionStatus
 import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.utils.CurrencyUtils
 import dev.albertus.expensms.utils.SmsSync
@@ -196,6 +197,43 @@ class MainViewModel @Inject constructor(
     fun loadSmsMessages() {
         viewModelScope.launch {
             syncSmsMessages()
+        }
+    }
+
+    private val _deleteMode = MutableStateFlow(false)
+    val deleteMode: StateFlow<Boolean> = _deleteMode.asStateFlow()
+
+    private val _selectedTransactions = MutableStateFlow<Set<String>>(emptySet())
+    val selectedTransactions: StateFlow<Set<String>> = _selectedTransactions.asStateFlow()
+
+    fun toggleDeleteMode() {
+        _deleteMode.value = !_deleteMode.value
+        if (!_deleteMode.value) {
+            _selectedTransactions.value = emptySet()
+        }
+    }
+
+    fun toggleTransactionSelection(transactionId: String) {
+        _selectedTransactions.value = _selectedTransactions.value.toMutableSet().apply {
+            if (contains(transactionId)) remove(transactionId) else add(transactionId)
+        }
+    }
+
+    fun deleteSelectedTransactions() {
+        viewModelScope.launch {
+            transactionRepository.updateTransactionStatus(_selectedTransactions.value.toList(), TransactionStatus.IGNORED)
+            _selectedTransactions.value = emptySet()
+            _deleteMode.value = false
+        }
+    }
+
+    val ignoredTransactions: StateFlow<List<Transaction>> = transactionRepository.getIgnoredTransactions()
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    fun restoreSelectedTransactions() {
+        viewModelScope.launch {
+            transactionRepository.updateTransactionStatus(_selectedTransactions.value.toList(), TransactionStatus.ACTIVE)
+            _selectedTransactions.value = emptySet()
         }
     }
 }

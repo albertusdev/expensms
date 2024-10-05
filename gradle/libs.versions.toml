@@ -40,7 +40,7 @@ protobufPlugin = "0.9.4"
 room = "2.6.1"
 work = "2.8.1"
 espressoCoreVersion = "3.5.0"
-
+navigation-compose = "2.7.7"
 
 [libraries]
 
@@ -102,6 +102,7 @@ mockito-inline = { group = "org.mockito", name = "mockito-inline", version.ref =
 protobuf-kotlin-lite = { group = "com.google.protobuf", name = "protobuf-kotlin-lite", version.ref = "protobuf" }
 protobuf-protoc = { group = "com.google.protobuf", name = "protoc", version.ref = "protobuf" }
 robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation-compose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

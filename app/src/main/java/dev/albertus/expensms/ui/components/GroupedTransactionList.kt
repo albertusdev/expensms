@@ -18,7 +18,10 @@ fun GroupedTransactionList(
     modifier: Modifier = Modifier,
     isAmountVisible: Boolean = true,
     onTransactionClick: (String) -> Unit,
-    lazyListState: LazyListState = rememberLazyListState()
+    lazyListState: LazyListState = rememberLazyListState(),
+    deleteMode: Boolean = false,
+    selectedTransactions: Set<String> = emptySet(),
+    onTransactionSelect: (String) -> Unit = {}
 ) {
     LazyColumn(modifier = modifier, state = lazyListState) {
         groupedTransactions.forEach { (date, transactions) ->
@@ -32,11 +35,11 @@ fun GroupedTransactionList(
                 TransactionItem(
                     transaction = transaction,
                     isAmountVisible = isAmountVisible,
-                    onClick = { onTransactionClick(transaction.id) }
+                    onClick = { onTransactionClick(transaction.id) },
+                    deleteMode = deleteMode,
+                    isSelected = selectedTransactions.contains(transaction.id),
+                    onSelect = onTransactionSelect
                 )
-            }
-            item {
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
             }
         }
     }

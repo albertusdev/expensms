@@ -5,49 +5,40 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import dev.albertus.expensms.data.model.Transaction
-import dev.albertus.expensms.ui.viewModels.MainViewModel
-import java.time.LocalDate
-import java.time.YearMonth
+import dev.albertus.expensms.ui.props.LayoutProps
 
 @Composable
 fun WideLayout(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel,
-    groupedTransactions: Map<LocalDate, List<Transaction>>,
-    filteredTransactions: Map<LocalDate, List<Transaction>>,
-    selectedDate: LocalDate?,
-    onDateSelected: (LocalDate) -> Unit,
-    selectedMonth: YearMonth,
-    showMonthlyTotal: Boolean,
-    isAmountVisible: Boolean,
-    onTransactionClick: (String) -> Unit,
-    transactionCounts: Map<LocalDate, Int>
+    props: LayoutProps
 ) {
     Row(modifier = modifier) {
         Column(modifier = Modifier.weight(0.4f)) {
             TransactionCalendar(
-                availableDates = groupedTransactions.keys,
-                onDateSelected = { date -> viewModel.selectDate(date) },
-                selectedDate = selectedDate,
-                onMonthChanged = viewModel::setSelectedMonth,
+                availableDates = props.groupedTransactions.keys,
+                onDateSelected = { date -> props.viewModel.selectDate(date) },
+                selectedDate = props.selectedDate,
+                onMonthChanged = props.viewModel::setSelectedMonth,
                 modifier = Modifier.fillMaxWidth(),
-                transactionCounts = transactionCounts
+                transactionCounts = props.transactionCounts
             )
-            if (showMonthlyTotal) {
+            if (props.showMonthlyTotal) {
                 MonthlyTotalSpending(
-                    month = selectedMonth,
-                    totalSpending = viewModel.getMonthlyTotalSpending(),
+                    month = props.selectedMonth,
+                    totalSpending = props.viewModel.getMonthlyTotalSpending(),
                     isWideLayout = true,
-                    isAmountVisible = isAmountVisible
+                    isAmountVisible = props.isAmountVisible
                 )
             }
         }
         GroupedTransactionList(
-            groupedTransactions = filteredTransactions,
+            groupedTransactions = props.filteredTransactions,
             modifier = Modifier.weight(0.6f),
-            isAmountVisible = isAmountVisible,
-            onTransactionClick = onTransactionClick
+            isAmountVisible = props.isAmountVisible,
+            onTransactionClick = props.onTransactionClick,
+            deleteMode = props.deleteMode,
+            selectedTransactions = props.selectedTransactions,
+            onTransactionSelect = props.onTransactionSelect
         )
     }
 }

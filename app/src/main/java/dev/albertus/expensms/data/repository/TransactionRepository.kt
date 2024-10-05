@@ -3,6 +3,7 @@ package dev.albertus.expensms.data.repository
 import dev.albertus.expensms.data.local.SyncMetadataDao
 import dev.albertus.expensms.data.local.TransactionDao
 import dev.albertus.expensms.data.model.Transaction
+import dev.albertus.expensms.data.model.TransactionStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -22,6 +23,12 @@ class TransactionRepository @Inject constructor(
         }
     }
 
+    suspend fun updateTransactionStatus(ids: List<String>, status: TransactionStatus) {
+        withContext(Dispatchers.IO) {
+            transactionDao.updateTransactionStatus(ids, status)
+        }
+    }
+
     fun getLastSyncTimestamp(): Long {
         return syncMetadataDao.getLastSyncTimestamp() ?: 0L
     }
@@ -30,5 +37,9 @@ class TransactionRepository @Inject constructor(
         withContext(Dispatchers.IO) {
             syncMetadataDao.updateLastSyncTimestamp(timestamp)
         }
+    }
+
+    fun getIgnoredTransactions(): Flow<List<Transaction>> {
+        return transactionDao.getAllTransactionsFlow(status = TransactionStatus.IGNORED)
     }
 }
