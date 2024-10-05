@@ -12,21 +12,22 @@ import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.ui.theme.ExpenseRed
 import dev.albertus.expensms.utils.CurrencyUtils.format
 import dev.albertus.expensms.utils.DateUtils.formatToTimeOnly
+import dev.albertus.expensms.ui.model.SelectionMode
 
 @Composable
 fun TransactionItem(
     transaction: Transaction,
     isAmountVisible: Boolean,
     onClick: () -> Unit,
-    deleteMode: Boolean = false,
-    isSelected: Boolean = false,
-    onSelect: (String) -> Unit = {}
+    selectionMode: SelectionMode,
+    isSelected: Boolean,
+    onSelect: (String) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable(onClick = if (deleteMode) { { onSelect(transaction.id) } } else onClick),
+            .clickable(onClick = if (selectionMode != SelectionMode.NONE) { { onSelect(transaction.id) } } else onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = if (isSelected) CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer) else CardDefaults.cardColors()
     ) {
@@ -34,7 +35,7 @@ fun TransactionItem(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (deleteMode) {
+            if (selectionMode != SelectionMode.NONE) {
                 Checkbox(
                     checked = isSelected,
                     onCheckedChange = { onSelect(transaction.id) },

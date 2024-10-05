@@ -11,6 +11,7 @@ import dev.albertus.expensms.data.model.TransactionStatus
 import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.utils.CurrencyUtils
 import dev.albertus.expensms.utils.SmsSync
+import dev.albertus.expensms.ui.model.SelectionMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -208,9 +209,33 @@ class MainViewModel @Inject constructor(
     }
 
     fun toggleTransactionSelection(transactionId: String) {
-        _selectedTransactions.value = _selectedTransactions.value.toMutableSet().apply {
-            if (contains(transactionId)) remove(transactionId) else add(transactionId)
+        _selectedTransactions.update { currentSelection ->
+            if (currentSelection.contains(transactionId)) {
+                currentSelection - transactionId
+            } else {
+                currentSelection + transactionId
+            }
         }
+    }
+
+    fun selectAllTransactionsForDate(date: LocalDate) {
+        val transactionsForDate = filteredTransactions.value[date] ?: emptyList()
+        _selectedTransactions.update { currentSelection ->
+            currentSelection + transactionsForDate.map { it.id }
+        }
+    }
+
+    fun selectAllTransactionsForMonth(yearMonth: YearMonth) {
+        val transactionsForMonth = filteredTransactions.value.filter { (date, _) ->
+            YearMonth.from(date) == yearMonth
+        }.values.flatten()
+        _selectedTransactions.update { currentSelection ->
+            currentSelection + transactionsForMonth.map { it.id }
+        }
+    }
+
+    fun getSelectedTransactions(): List<Transaction> {
+        return transactions.value.filter { it.id in selectedTransactions.value }
     }
 
     fun deleteSelectedTransactions() {
@@ -227,6 +252,16 @@ class MainViewModel @Inject constructor(
     fun restoreSelectedTransactions() {
         viewModelScope.launch {
             transactionRepository.updateTransactionStatus(_selectedTransactions.value.toList(), TransactionStatus.ACTIVE)
+            _selectedTransactions.value = emptySet()
+        }
+    }
+
+    private val _selectionMode = MutableStateFlow(SelectionMode.NONE)
+    val selectionMode: StateFlow<SelectionMode> = _selectionMode.asStateFlow()
+
+    fun setSelectionMode(mode: SelectionMode) {
+        _selectionMode.value = mode
+        if (mode == SelectionMode.NONE) {
             _selectedTransactions.value = emptySet()
         }
     }
