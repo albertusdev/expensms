@@ -7,15 +7,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.ui.viewModels.MainViewModel
 import dev.albertus.expensms.ui.theme.ExpenSMSTheme
 import dev.albertus.expensms.ui.components.NarrowLayout
 import dev.albertus.expensms.ui.components.WideLayout
 import dev.albertus.expensms.ui.components.DeleteConfirmationDialog
-import java.time.LocalDate
-import java.time.YearMonth
+import dev.albertus.expensms.ui.props.LayoutProps
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,6 +30,21 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
     val selectedTransactions by viewModel.selectedTransactions.collectAsState()
 
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    val layoutProps = LayoutProps(
+        viewModel = viewModel,
+        groupedTransactions = groupedTransactions,
+        filteredTransactions = filteredTransactions,
+        selectedDate = selectedDate,
+        selectedMonth = selectedMonth,
+        showMonthlyTotal = showMonthlyTotal,
+        isAmountVisible = isAmountVisible,
+        onTransactionClick = onNavigateToSmsDetail,
+        transactionCounts = transactionCounts,
+        deleteMode = deleteMode,
+        selectedTransactions = selectedTransactions,
+        onTransactionSelect = viewModel::toggleTransactionSelection
+    )
 
     ExpenSMSTheme {
         BoxWithConstraints {
@@ -74,7 +87,6 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         },
                         scrollBehavior = scrollBehavior
                     )
-                    // Add LinearProgressIndicator here, directly under the TopAppBar
                     if (loadingProgress < 1f) {
                         LinearProgressIndicator(
                             progress = { loadingProgress },
@@ -87,40 +99,16 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                     }
                 }
             ) { paddingValues ->
-                // Existing layout content
                 if (isWideLayout) {
                     WideLayout(
                         modifier = Modifier.padding(paddingValues),
-                        viewModel = viewModel,
-                        groupedTransactions = groupedTransactions,
-                        filteredTransactions = filteredTransactions,
-                        selectedDate = selectedDate,
-                        onDateSelected = { date -> viewModel.setSelectedDate(date) },
-                        selectedMonth = selectedMonth,
-                        showMonthlyTotal = showMonthlyTotal,
-                        isAmountVisible = isAmountVisible,
-                        onTransactionClick = onNavigateToSmsDetail,
-                        transactionCounts = transactionCounts,
-                        deleteMode = deleteMode,
-                        selectedTransactions = selectedTransactions,
-                        onTransactionSelect = viewModel::toggleTransactionSelection
+                        props = layoutProps
                     )
                 } else {
                     NarrowLayout(
                         modifier = Modifier.padding(paddingValues),
-                        viewModel = viewModel,
-                        groupedTransactions = groupedTransactions,
-                        filteredTransactions = filteredTransactions,
-                        selectedDate = selectedDate,
-                        selectedMonth = selectedMonth,
-                        showMonthlyTotal = showMonthlyTotal,
-                        isAmountVisible = isAmountVisible,
-                        onTransactionClick = onNavigateToSmsDetail,
-                        scrollBehavior = scrollBehavior,
-                        transactionCounts = transactionCounts,
-                        deleteMode = deleteMode,
-                        selectedTransactions = selectedTransactions,
-                        onTransactionSelect = viewModel::toggleTransactionSelection
+                        props = layoutProps,
+                        scrollBehavior = scrollBehavior
                     )
                 }
             }
