@@ -11,11 +11,17 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import dev.albertus.expensms.data.UserPreferences
+import dev.albertus.expensms.data.api.ApiClient
+import dev.albertus.expensms.data.api.ApiLogger
+import dev.albertus.expensms.data.api.ApiService
+import dev.albertus.expensms.data.local.ApiLogDao
 import dev.albertus.expensms.data.local.AppDatabase
 import dev.albertus.expensms.data.local.SyncMetadataDao
 import dev.albertus.expensms.data.local.TransactionDao
 import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.data.serializer.UserPreferencesSerializer
+import dev.albertus.expensms.utils.SecureStorage
+import dev.albertus.expensms.utils.SmsForwardingService
 import dev.albertus.expensms.utils.SmsSync
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -66,7 +72,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTransactionRepository(transactionDao: TransactionDao, syncMetadataDao: SyncMetadataDao): TransactionRepository {
+    fun provideTransactionRepository(
+        transactionDao: TransactionDao,
+        syncMetadataDao: SyncMetadataDao
+    ): TransactionRepository {
         return TransactionRepository(transactionDao, syncMetadataDao)
     }
 
@@ -84,6 +93,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideApiLogDao(database: AppDatabase): ApiLogDao {
+        return database.apiLogDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideSmsSync(
         contentResolver: ContentResolver,
         transactionRepository: TransactionRepository
@@ -95,6 +110,56 @@ object AppModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
         return AppDatabase.getDatabase(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSecureStorage(@ApplicationContext context: Context): SecureStorage {
+        return SecureStorage(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideApiLogger(
+        apiLogDao: ApiLogDao,
+        @ApplicationScope coroutineScope: CoroutineScope
+    ): ApiLogger {
+        return ApiLogger(apiLogDao, coroutineScope)
+    }
+
+    @Provides
+    @Singleton
+    fun provideApiClient(apiLogger: ApiLogger): ApiClient {
+        return ApiClient(apiLogger)
+    }
+
+    @Provides
+    @Singleton
+    fun provideApiService(
+        apiClient: ApiClient,
+        secureStorage: SecureStorage,
+        userPreferencesDataStore: DataStore<UserPreferences>,
+        apiLogger: ApiLogger
+    ): ApiService {
+        return ApiService(apiClient, secureStorage, userPreferencesDataStore, apiLogger)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSmsForwardingService(
+        apiService: ApiService,
+        @ApplicationScope coroutineScope: CoroutineScope
+    ): SmsForwardingService {
+        return SmsForwardingService(apiService, coroutineScope)
+    }
+
+    @Provides
+    @Singleton
+    fun provideWorkerFactory(
+        transactionRepository: TransactionRepository,
+        smsForwardingService: SmsForwardingService
+    ): ExpenSMSWorkerFactory {
+        return ExpenSMSWorkerFactory(transactionRepository, smsForwardingService)
     }
 }
 

@@ -1,16 +1,20 @@
 package dev.albertus.expensms.ui.viewModels
 
 import androidx.datastore.core.DataStore
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.albertus.expensms.data.SupportedBank
 import dev.albertus.expensms.data.UserPreferences
+import dev.albertus.expensms.data.api.ApiResult
+import dev.albertus.expensms.data.api.ApiService
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.data.model.TransactionStatus
 import dev.albertus.expensms.data.repository.TransactionRepository
 import dev.albertus.expensms.utils.CurrencyUtils
 import dev.albertus.expensms.utils.SmsSync
+import dev.albertus.expensms.utils.SmsForwardingService
 import dev.albertus.expensms.ui.model.SelectionMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,15 +35,46 @@ import javax.money.MonetaryAmount
 class MainViewModel @Inject constructor(
     private val userPreferencesDataStore: DataStore<UserPreferences>,
     private val transactionRepository: TransactionRepository,
-    private val smsSync: SmsSync
+    private val smsSync: SmsSync,
+    private val apiService: ApiService,
+    private val smsForwardingService: SmsForwardingService
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "MainViewModel"
+    }
+
     val enabledBanks: StateFlow<Map<String, Boolean>> = userPreferencesDataStore.data
-        .map { it.enabledBanksMap }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyMap())
+        .map { preferences ->
+            val enabledBanksMap = preferences.enabledBanksMap
+            // If no banks are configured, enable all banks by default
+            if (enabledBanksMap.isEmpty()) {
+                SupportedBank.entries.associate { it.name to true }
+            } else {
+                enabledBanksMap
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(),
+            // Default to all banks enabled
+            SupportedBank.entries.associate { it.name to true }
+        )
+
+    val apiForwardingEnabled: StateFlow<Boolean> = userPreferencesDataStore.data
+        .map { it.apiForwardingEnabled }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
+
+    val apiEmail: StateFlow<String> = userPreferencesDataStore.data
+        .map { it.apiEmail }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), "")
 
     private val _loadingProgress = MutableStateFlow(0f)
     val loadingProgress: StateFlow<Float> = _loadingProgress.asStateFlow()
+
+    private val _apiTestResult = MutableStateFlow<String?>(null)
+    val apiTestResult: StateFlow<String?> = _apiTestResult.asStateFlow()
+
+    private val _isTestingApi = MutableStateFlow(false)
+    val isTestingApi: StateFlow<Boolean> = _isTestingApi.asStateFlow()
 
     val transactions: StateFlow<List<Transaction>> = transactionRepository.getAllTransactions()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -74,18 +109,26 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun syncSmsMessages() {
+    private fun syncSmsMessages(fullSync: Boolean = false) {
         viewModelScope.launch {
             try {
+                Log.i(TAG, "=== SYNC TRIGGERED FROM UI ===")
+                Log.i(TAG, "Full sync requested: $fullSync")
+
                 _loadingProgress.value = 0f
                 val enabledBankNames = enabledBanks.value.filter { it.value }.keys
                 val enabledBanks = SupportedBank.entries.filter { enabledBankNames.contains(it.name) }
 
-                smsSync.syncSmsMessages(enabledBanks) { progress ->
+                Log.i(TAG, "Enabled bank names: $enabledBankNames")
+                Log.i(TAG, "Enabled bank objects: ${enabledBanks.map { it.name }}")
+
+                smsSync.syncSmsMessages(enabledBanks, { progress ->
                     _loadingProgress.value = progress
-                }
+                }, fullSync)
+
+                Log.i(TAG, "=== SYNC COMPLETED FROM UI ===")
             } catch (e: Exception) {
-                // Handle error
+                Log.e(TAG, "Error during SMS sync", e)
             } finally {
                 _loadingProgress.value = 1f
             }
@@ -190,8 +233,16 @@ class MainViewModel @Inject constructor(
     }
 
     fun loadSmsMessages() {
+        Log.i(TAG, "loadSmsMessages() called - incremental sync")
         viewModelScope.launch {
             syncSmsMessages()
+        }
+    }
+
+    fun loadAllSmsMessages() {
+        Log.i(TAG, "loadAllSmsMessages() called - FULL SYNC")
+        viewModelScope.launch {
+            syncSmsMessages(fullSync = true)
         }
     }
 
@@ -209,29 +260,26 @@ class MainViewModel @Inject constructor(
     }
 
     fun toggleTransactionSelection(transactionId: String) {
-        _selectedTransactions.update { currentSelection ->
-            if (currentSelection.contains(transactionId)) {
-                currentSelection - transactionId
-            } else {
-                currentSelection + transactionId
-            }
+        val currentSelection = _selectedTransactions.value
+        _selectedTransactions.value = if (currentSelection.contains(transactionId)) {
+            currentSelection - transactionId
+        } else {
+            currentSelection + transactionId
         }
     }
 
     fun selectAllTransactionsForDate(date: LocalDate) {
-        val transactionsForDate = filteredTransactions.value[date] ?: emptyList()
-        _selectedTransactions.update { currentSelection ->
-            currentSelection + transactionsForDate.map { it.id }
-        }
+        val transactionsForDate = groupedTransactions.value[date] ?: emptyList()
+        val currentSelection = _selectedTransactions.value
+        _selectedTransactions.value = currentSelection + transactionsForDate.map { it.id }
     }
 
     fun selectAllTransactionsForMonth(yearMonth: YearMonth) {
-        val transactionsForMonth = filteredTransactions.value.filter { (date, _) ->
+        val transactionsForMonth = groupedTransactions.value.filter { (date, _) ->
             YearMonth.from(date) == yearMonth
         }.values.flatten()
-        _selectedTransactions.update { currentSelection ->
-            currentSelection + transactionsForMonth.map { it.id }
-        }
+        val currentSelection = _selectedTransactions.value
+        _selectedTransactions.value = currentSelection + transactionsForMonth.map { it.id }
     }
 
     fun getSelectedTransactions(): List<Transaction> {
@@ -244,6 +292,37 @@ class MainViewModel @Inject constructor(
             _selectedTransactions.value = emptySet()
             _deleteMode.value = false
         }
+    }
+
+    fun forwardSelectedTransactions() {
+        Log.i(TAG, "=== BULK FORWARD SELECTED TRANSACTIONS ===")
+        val selectedTxns = getSelectedTransactions()
+        val ocbcTransactions = selectedTxns.filter { it.bank == "OCBC" }
+
+        Log.i(TAG, "Total selected: ${selectedTxns.size}")
+        Log.i(TAG, "OCBC transactions to forward: ${ocbcTransactions.size}")
+
+        if (ocbcTransactions.isEmpty()) {
+            Log.w(TAG, "No OCBC transactions selected for forwarding")
+            return
+        }
+
+        viewModelScope.launch {
+            ocbcTransactions.forEach { transaction ->
+                Log.i(TAG, "Forwarding transaction: ${transaction.id} - ${transaction.merchant}")
+                smsForwardingService.forwardTransactionIfEnabled(transaction)
+            }
+
+            // Clear selection and exit delete mode after forwarding
+            _selectedTransactions.value = emptySet()
+            _deleteMode.value = false
+
+            Log.i(TAG, "=== BULK FORWARD COMPLETED ===")
+        }
+    }
+
+    fun getSelectedOcbcTransactionsCount(): Int {
+        return getSelectedTransactions().count { it.bank == "OCBC" }
     }
 
     val ignoredTransactions: StateFlow<List<Transaction>> = transactionRepository.getIgnoredTransactions()
@@ -263,6 +342,61 @@ class MainViewModel @Inject constructor(
         _selectionMode.value = mode
         if (mode == SelectionMode.NONE) {
             _selectedTransactions.value = emptySet()
+        }
+    }
+
+    // API Configuration Methods
+    fun setApiForwardingEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesDataStore.updateData { preferences ->
+                preferences.toBuilder()
+                    .setApiForwardingEnabled(enabled)
+                    .build()
+            }
+        }
+    }
+
+    fun setApiEmail(email: String) {
+        viewModelScope.launch {
+            userPreferencesDataStore.updateData { preferences ->
+                preferences.toBuilder()
+                    .setApiEmail(email)
+                    .build()
+            }
+        }
+    }
+
+    fun testApiConnection(email: String, password: String) {
+        viewModelScope.launch {
+            _isTestingApi.value = true
+            _apiTestResult.value = null
+
+            when (val result = apiService.testConnection(email, password)) {
+                is ApiResult.Success -> {
+                    _apiTestResult.value = "✓ Connection successful"
+                    // Save email to preferences
+                    setApiEmail(email)
+                }
+                is ApiResult.Error -> {
+                    _apiTestResult.value = "✗ Error: ${result.message}"
+                }
+                is ApiResult.NetworkError -> {
+                    _apiTestResult.value = "✗ Network error. Check your connection."
+                }
+            }
+
+            _isTestingApi.value = false
+        }
+    }
+
+    fun clearApiTestResult() {
+        _apiTestResult.value = null
+    }
+
+    fun clearApiConfiguration() {
+        viewModelScope.launch {
+            apiService.clearApiConfiguration()
+            _apiTestResult.value = null
         }
     }
 }

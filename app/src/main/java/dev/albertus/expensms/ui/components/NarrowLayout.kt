@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.albertus.expensms.ui.model.SelectionMode
 import dev.albertus.expensms.ui.props.LayoutProps
 
 @Composable
@@ -48,7 +49,7 @@ fun NarrowLayout(
                         transaction = transaction,
                         isAmountVisible = props.isAmountVisible,
                         onClick = { props.onTransactionClick(transaction.id) },
-                        deleteMode = props.deleteMode,
+                        selectionMode = if (props.deleteMode) SelectionMode.DELETE else SelectionMode.NONE,
                         isSelected = props.selectedTransactions.contains(transaction.id),
                         onSelect = props.onTransactionSelect
                     )

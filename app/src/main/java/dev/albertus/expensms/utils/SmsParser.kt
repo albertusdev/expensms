@@ -1,5 +1,6 @@
 package dev.albertus.expensms.utils
 
+import android.util.Log
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.data.SupportedBank
 import java.time.Instant
@@ -31,10 +32,22 @@ object SmsParser {
         logger = newLogger
     }
 
-    fun parseTransaction(body: String, timestamp: Long): Transaction? {
-        return SupportedBank.entries.firstNotNullOfOrNull { bank ->
-            parseTransactionForBank(bank, body, timestamp)
+    fun parseTransaction(body: String, timestamp: Long, sender: String? = null): Transaction? {
+        Log.d(TAG, "=== PARSING SMS ===")
+        Log.d(TAG, "Sender: '$sender'")
+        Log.d(TAG, "Body: $body")
+
+        val result = SupportedBank.entries.firstNotNullOfOrNull { bank ->
+            parseTransactionForBank(bank, body, timestamp, sender)
         }
+
+        if (result != null) {
+            Log.i(TAG, "✅ Successfully parsed as ${result.bank} transaction")
+        } else {
+            Log.d(TAG, "❌ No parser matched this SMS")
+        }
+
+        return result
     }
 
     private fun mixDateAndTime(date: Date, time: Date): Date {
@@ -49,12 +62,26 @@ object SmsParser {
         return Date.from(combinedDateTime.atZone(ZoneId.systemDefault()).toInstant())
     }
 
-    private fun parseTransactionForBank(bank: SupportedBank, body: String, timestamp: Long): Transaction? {
+    private fun parseTransactionForBank(bank: SupportedBank, body: String, timestamp: Long, sender: String? = null): Transaction? {
+        Log.d(TAG, "Trying ${bank.name} parser...")
+
+        // Check sender filter if sender is provided
+        if (sender != null && !sender.contains(bank.senderFilter, ignoreCase = true)) {
+            Log.d(TAG, "  ❌ Sender '$sender' does not match filter '${bank.senderFilter}'")
+            return null
+        } else if (sender != null) {
+            Log.d(TAG, "  ✅ Sender '$sender' matches filter '${bank.senderFilter}'")
+        }
+
+        Log.d(TAG, "  Testing regex: ${bank.regex.pattern}")
         val matchResult = bank.regex.find(body)
         if (matchResult == null) {
-            logger.d(TAG, "No match found for ${bank.name} regex in body: $body")
+            Log.d(TAG, "  ❌ Regex did not match")
             return null
         }
+
+        Log.d(TAG, "  ✅ Regex matched! Extracting data...")
+        Log.d(TAG, "  Match groups: ${matchResult.groups.mapIndexed { index, group -> "$index: '${group?.value}'" }}")
 
         val cardNumber = matchResult.groups["cardNumber"]?.value
         val dateStr = matchResult.groups["date"]?.value
@@ -92,7 +119,8 @@ object SmsParser {
             merchant = merchant.trim(),
             amount = amount.number.toDouble(),
             rawMessage = body,
-            money = amount
+            money = amount,
+            sender = sender // Store the original SMS sender
         )
     }
 }

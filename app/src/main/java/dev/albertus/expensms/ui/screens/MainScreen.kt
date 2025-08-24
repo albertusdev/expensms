@@ -3,6 +3,8 @@ package dev.albertus.expensms.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -13,6 +15,7 @@ import dev.albertus.expensms.ui.theme.ExpenSMSTheme
 import dev.albertus.expensms.ui.components.NarrowLayout
 import dev.albertus.expensms.ui.components.WideLayout
 import dev.albertus.expensms.ui.components.DeleteConfirmationDialog
+import dev.albertus.expensms.ui.components.ForwardConfirmationDialog
 import dev.albertus.expensms.ui.props.LayoutProps
 import dev.albertus.expensms.ui.model.SelectionMode
 import androidx.compose.material.icons.filled.FileDownload
@@ -33,6 +36,7 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
     val selectionMode by viewModel.selectionMode.collectAsState()
 
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showForwardConfirmation by remember { mutableStateOf(false) }
 
     val layoutProps = LayoutProps(
         viewModel = viewModel,
@@ -66,7 +70,20 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         },
                         actions = {
                             if (deleteMode) {
+                                val ocbcCount = viewModel.getSelectedOcbcTransactionsCount()
                                 Text("${selectedTransactions.size} selected")
+
+                                // Forward button (only show if OCBC transactions are selected)
+                                if (ocbcCount > 0) {
+                                    IconButton(onClick = { showForwardConfirmation = true }) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.Send,
+                                            contentDescription = "Forward selected OCBC transactions"
+                                        )
+                                    }
+                                }
+
+                                // Delete button
                                 IconButton(onClick = { showDeleteConfirmation = true }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete selected")
                                 }
@@ -77,6 +94,12 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                                         contentDescription = "Toggle amount visibility"
                                     )
                                 }
+                            }
+                            IconButton(onClick = { viewModel.loadAllSmsMessages() }) {
+                                Icon(
+                                    Icons.Outlined.Refresh,
+                                    contentDescription = "Sync all SMS"
+                                )
                             }
                             IconButton(onClick = { viewModel.toggleDeleteMode() }) {
                                 Icon(
@@ -132,6 +155,17 @@ fun MainScreen(viewModel: MainViewModel, onNavigateToSettings: () -> Unit, onNav
                         showDeleteConfirmation = false
                     },
                     onDismiss = { showDeleteConfirmation = false }
+                )
+            }
+
+            if (showForwardConfirmation) {
+                ForwardConfirmationDialog(
+                    count = viewModel.getSelectedOcbcTransactionsCount(),
+                    onConfirm = {
+                        viewModel.forwardSelectedTransactions()
+                        showForwardConfirmation = false
+                    },
+                    onDismiss = { showForwardConfirmation = false }
                 )
             }
         }

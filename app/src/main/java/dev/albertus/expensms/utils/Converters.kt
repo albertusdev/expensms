@@ -1,6 +1,7 @@
 package dev.albertus.expensms.utils
 
 import androidx.room.TypeConverter
+import dev.albertus.expensms.data.model.ApiLogType
 import org.javamoney.moneta.FastMoney
 import java.util.Date
 import javax.money.MonetaryAmount
@@ -27,5 +28,15 @@ class Converters {
             val (currencyCode, amount) = it.split(":")
             FastMoney.of(amount.toBigDecimal(), currencyCode)
         }
+    }
+
+    @TypeConverter
+    fun fromApiLogType(apiLogType: ApiLogType?): String? {
+        return apiLogType?.name
+    }
+
+    @TypeConverter
+    fun toApiLogType(value: String?): ApiLogType? {
+        return value?.let { ApiLogType.valueOf(it) }
     }
 }

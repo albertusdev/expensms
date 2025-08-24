@@ -12,7 +12,7 @@ enum class SupportedBank(
 ) {
     OCBC(
         displayName = "OCBC",
-        senderFilter = "OCBC",
+        senderFilter = "OCBC", // Will match both "OCBC" and "OCBC Info"
         sampleSms = "Anda telah trx dgn KK OCBC 1234 28/09/24 di GOPAY Jakarta Selat IDR143,700.00. Cicilan bunga ringan s.d 24bln di ocbc.id/ocbcmobile. S&K. Info:1500999",
         regex = Regex("Anda telah trx dgn KK OCBC (?<cardNumber>\\d{4}) (?<date>\\d{2}/\\d{2}/\\d{2}) di (?<merchant>.+) (?<currency>[A-Z]{3})(?<amount>[\\d.,]+)\\."),
         parseDate = { SimpleDateFormat("dd/MM/yy", Locale.getDefault()).parse(it) },

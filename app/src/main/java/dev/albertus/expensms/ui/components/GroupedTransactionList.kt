@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.albertus.expensms.data.model.Transaction
+import dev.albertus.expensms.ui.model.SelectionMode
 import java.time.LocalDate
 
 @Composable
@@ -36,7 +37,7 @@ fun GroupedTransactionList(
                     transaction = transaction,
                     isAmountVisible = isAmountVisible,
                     onClick = { onTransactionClick(transaction.id) },
-                    deleteMode = deleteMode,
+                    selectionMode = if (deleteMode) SelectionMode.DELETE else SelectionMode.NONE,
                     isSelected = selectedTransactions.contains(transaction.id),
                     onSelect = onTransactionSelect
                 )

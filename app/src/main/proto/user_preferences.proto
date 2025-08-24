@@ -7,4 +7,6 @@ message UserPreferences {
   map<string, bool> enabled_banks = 1;
   bool show_monthly_total = 2;
   bool is_amount_visible = 3;
+  bool api_forwarding_enabled = 4;
+  string api_email = 5;
 }

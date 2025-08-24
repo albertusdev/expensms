@@ -5,15 +5,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import dev.albertus.expensms.data.model.ApiLog
 import dev.albertus.expensms.data.model.SyncMetadata
 import dev.albertus.expensms.data.model.Transaction
 import dev.albertus.expensms.utils.Converters
 
-@Database(entities = [Transaction::class, SyncMetadata::class], version = 3, exportSchema = true)
+@Database(entities = [Transaction::class, SyncMetadata::class, ApiLog::class], version = 5, exportSchema = true)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun syncMetadataDao(): SyncMetadataDao
+    abstract fun apiLogDao(): ApiLogDao
 
     companion object {
         @Volatile

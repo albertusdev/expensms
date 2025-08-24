@@ -12,6 +12,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
@@ -33,20 +34,28 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import dev.albertus.expensms.ui.screens.ApiLogsScreen
 import dev.albertus.expensms.ui.screens.ErrorScreen
 import dev.albertus.expensms.ui.screens.MainScreen
 import dev.albertus.expensms.ui.screens.PermissionScreen
 import dev.albertus.expensms.ui.screens.SettingsScreen
 import dev.albertus.expensms.ui.screens.SmsDetailScreen
 import dev.albertus.expensms.ui.screens.TrashBinScreen
+import dev.albertus.expensms.ui.viewModels.ApiLogsViewModel
 import dev.albertus.expensms.ui.theme.ExpenSMSTheme
 import dev.albertus.expensms.ui.viewModels.MainViewModel
+import dev.albertus.expensms.utils.SmsForwardingService
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private lateinit var permissionState: MutableState<Boolean>
     private val viewModel: MainViewModel by viewModels()
+    private val apiLogsViewModel: ApiLogsViewModel by viewModels()
+
+    @Inject
+    lateinit var smsForwardingService: SmsForwardingService
 
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -90,6 +99,18 @@ class MainActivity : ComponentActivity() {
                                 selected = false,
                                 onClick = {
                                     navController.navigate("trashBin") {
+                                        popUpTo(navController.graph.startDestinationId)
+                                        launchSingleTop = true
+                                    }
+                                    scope.launch { drawerState.close() }
+                                }
+                            )
+                            NavigationDrawerItem(
+                                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                                label = { Text("API Logs") },
+                                selected = false,
+                                onClick = {
+                                    navController.navigate("apiLogs") {
                                         popUpTo(navController.graph.startDestinationId)
                                         launchSingleTop = true
                                     }
@@ -220,7 +241,10 @@ class MainActivity : ComponentActivity() {
                             if (transaction != null) {
                                 SmsDetailScreen(
                                     transaction = transaction,
-                                    onNavigateBack = { navController.popBackStack() }
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onForceForward = { transactionToForward ->
+                                        smsForwardingService.forwardTransactionIfEnabled(transactionToForward)
+                                    }
                                 )
                             } else {
                                 ErrorScreen(
@@ -259,6 +283,39 @@ class MainActivity : ComponentActivity() {
                             TrashBinScreen(
                                 viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
+                            )
+                        }
+                        composable(
+                            route = "apiLogs",
+                            enterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                                    animationSpec = tween(300)
+                                )
+                            },
+                            exitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                                    animationSpec = tween(300)
+                                )
+                            },
+                            popEnterTransition = {
+                                slideIntoContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                    animationSpec = tween(300)
+                                )
+                            },
+                            popExitTransition = {
+                                slideOutOfContainer(
+                                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                                    animationSpec = tween(300)
+                                )
+                            }
+                        ) {
+                            ApiLogsScreen(
+                                viewModel = apiLogsViewModel,
+                                onNavigateBack = { navController.popBackStack() },
+                                onNavigateToSmsDetail = { id -> navController.navigate("smsDetail/$id") }
                             )
                         }
                     }

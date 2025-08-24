@@ -23,7 +23,7 @@ class SmsParserTest {
         val body = "Anda telah trx dgn KK OCBC 1234 28/09/24 di GOPAY Jakarta Selat IDR143,700.00. Cicilan bunga ringan s.d 24bln di ocbc.id/ocbcmobile. S&K. Info:1500999"
         val timestamp = System.currentTimeMillis()
 
-        val result = SmsParser.parseTransaction(body, timestamp)
+        val result = SmsParser.parseTransaction(body, timestamp, "OCBC")
 
         assertNotNull(result, "OCBC transaction should be parsed")
         result?.let { transaction ->
@@ -32,8 +32,14 @@ class SmsParserTest {
             assertEquals(143700.00, transaction.amount, 0.001)
             assertEquals(body, transaction.rawMessage)
 
-            val expectedDate = SimpleDateFormat("dd/MM/yy", Locale.getDefault()).parse("28/09/24")
-            assertEquals(expectedDate, transaction.date)
+            // Check that the date has the correct day/month/year (ignoring time)
+            val expectedDate = SimpleDateFormat("dd/MM/yy", Locale.getDefault()).parse("28/09/24")!!
+            val actualCalendar = Calendar.getInstance().apply { time = transaction.date }
+            val expectedCalendar = Calendar.getInstance().apply { time = expectedDate }
+
+            assertEquals(expectedCalendar.get(Calendar.YEAR), actualCalendar.get(Calendar.YEAR))
+            assertEquals(expectedCalendar.get(Calendar.MONTH), actualCalendar.get(Calendar.MONTH))
+            assertEquals(expectedCalendar.get(Calendar.DAY_OF_MONTH), actualCalendar.get(Calendar.DAY_OF_MONTH))
         }
     }
 
@@ -42,7 +48,7 @@ class SmsParserTest {
         val body = "Anda telah trx dgn KK OCBC 5678 30/09/24 di Amazon.com USD99.99. Cicilan bunga ringan s.d 24bln di ocbc.id/ocbcmobile. S&K. Info:1500999"
         val timestamp = System.currentTimeMillis()
 
-        val result = SmsParser.parseTransaction(body, timestamp)
+        val result = SmsParser.parseTransaction(body, timestamp, "OCBC")
 
         assertNotNull(result, "OCBC transaction should be parsed")
         result?.let { transaction ->
@@ -51,8 +57,14 @@ class SmsParserTest {
             assertEquals(99.99, transaction.amount, 0.001)
             assertEquals(body, transaction.rawMessage)
 
-            val expectedDate = SimpleDateFormat("dd/MM/yy", Locale.getDefault()).parse("30/09/24")
-            assertEquals(expectedDate, transaction.date)
+            // Check that the date has the correct day/month/year (ignoring time)
+            val expectedDate = SimpleDateFormat("dd/MM/yy", Locale.getDefault()).parse("30/09/24")!!
+            val actualCalendar = Calendar.getInstance().apply { time = transaction.date }
+            val expectedCalendar = Calendar.getInstance().apply { time = expectedDate }
+
+            assertEquals(expectedCalendar.get(Calendar.YEAR), actualCalendar.get(Calendar.YEAR))
+            assertEquals(expectedCalendar.get(Calendar.MONTH), actualCalendar.get(Calendar.MONTH))
+            assertEquals(expectedCalendar.get(Calendar.DAY_OF_MONTH), actualCalendar.get(Calendar.DAY_OF_MONTH))
         }
     }
 
@@ -61,7 +73,7 @@ class SmsParserTest {
         val body = "Transaksi KK UOB Anda 5XXXXXXXXXXX6806 tgl 26-Sep-24 di EXPAT ROASTERS IDR 76.300,00 berhasil. RAHASIAKAN OTP Anda. Info 14008"
         val timestamp = System.currentTimeMillis()
 
-        val result = SmsParser.parseTransaction(body, timestamp)
+        val result = SmsParser.parseTransaction(body, timestamp, "UOB")
 
         assertNotNull(result, "UOB transaction should be parsed")
         result?.let { transaction ->
@@ -70,8 +82,14 @@ class SmsParserTest {
             assertEquals(76300.00, transaction.amount, 0.001)
             assertEquals(body, transaction.rawMessage)
 
-            val expectedDate = SimpleDateFormat("dd-MMM-yy", Locale.US).parse("26-Sep-24")
-            assertEquals(expectedDate, transaction.date)
+            // Check that the date has the correct day/month/year (ignoring time)
+            val expectedDate = SimpleDateFormat("dd-MMM-yy", Locale.US).parse("26-Sep-24")!!
+            val actualCalendar = Calendar.getInstance().apply { time = transaction.date }
+            val expectedCalendar = Calendar.getInstance().apply { time = expectedDate }
+
+            assertEquals(expectedCalendar.get(Calendar.YEAR), actualCalendar.get(Calendar.YEAR))
+            assertEquals(expectedCalendar.get(Calendar.MONTH), actualCalendar.get(Calendar.MONTH))
+            assertEquals(expectedCalendar.get(Calendar.DAY_OF_MONTH), actualCalendar.get(Calendar.DAY_OF_MONTH))
         }
     }
 
@@ -80,7 +98,7 @@ class SmsParserTest {
         val body = "Transaksi KK UOB Anda 5XXXXXXXXXXX1234 tgl 27-Sep-24 di SINGAPORE AIRLINES SGD 500.00 berhasil. RAHASIAKAN OTP Anda. Info 14008"
         val timestamp = System.currentTimeMillis()
 
-        val result = SmsParser.parseTransaction(body, timestamp)
+        val result = SmsParser.parseTransaction(body, timestamp, "UOB")
 
         assertNotNull(result, "UOB transaction should be parsed", )
         result?.let { transaction ->
@@ -89,8 +107,30 @@ class SmsParserTest {
             assertEquals(500.00, transaction.amount, 0.001)
             assertEquals(body, transaction.rawMessage)
 
-            val expectedDate = SimpleDateFormat("dd-MMM-yy", Locale.US).parse("27-Sep-24")
-            assertEquals(expectedDate, transaction.date)
+            // Check that the date has the correct day/month/year (ignoring time)
+            val expectedDate = SimpleDateFormat("dd-MMM-yy", Locale.US).parse("27-Sep-24")!!
+            val actualCalendar = Calendar.getInstance().apply { time = transaction.date }
+            val expectedCalendar = Calendar.getInstance().apply { time = expectedDate }
+
+            assertEquals(expectedCalendar.get(Calendar.YEAR), actualCalendar.get(Calendar.YEAR))
+            assertEquals(expectedCalendar.get(Calendar.MONTH), actualCalendar.get(Calendar.MONTH))
+            assertEquals(expectedCalendar.get(Calendar.DAY_OF_MONTH), actualCalendar.get(Calendar.DAY_OF_MONTH))
+        }
+    }
+
+    @Test
+    fun testParseOcbcTransactionWithOcbcInfoSender() {
+        val body = "Anda telah trx dgn KK OCBC 9999 01/01/25 di TEST MERCHANT IDR50,000.00. Cicilan bunga ringan s.d 24bln di ocbc.id/ocbcmobile. S&K. Info:1500999"
+        val timestamp = System.currentTimeMillis()
+
+        val result = SmsParser.parseTransaction(body, timestamp, "OCBC Info")
+
+        assertNotNull(result, "OCBC transaction should be parsed with 'OCBC Info' sender")
+        result?.let { transaction ->
+            assertEquals("9999", transaction.cardLastFourDigits)
+            assertEquals("TEST MERCHANT", transaction.merchant)
+            assertEquals(50000.00, transaction.amount, 0.001)
+            assertEquals("OCBC", transaction.bank)
         }
     }
 
@@ -99,8 +139,18 @@ class SmsParserTest {
         val body = "This is not a valid transaction SMS"
         val timestamp = System.currentTimeMillis()
 
-        val result = SmsParser.parseTransaction(body, timestamp)
+        val result = SmsParser.parseTransaction(body, timestamp, "UNKNOWN")
 
         assertNull(result)
+    }
+
+    @Test
+    fun testParseTransactionWrongSender() {
+        val body = "Anda telah trx dgn KK OCBC 1234 28/09/24 di GOPAY Jakarta Selat IDR143,700.00. Cicilan bunga ringan s.d 24bln di ocbc.id/ocbcmobile. S&K. Info:1500999"
+        val timestamp = System.currentTimeMillis()
+
+        val result = SmsParser.parseTransaction(body, timestamp, "WRONG_BANK")
+
+        assertNull(result, "Should not parse OCBC SMS with wrong sender")
     }
 }

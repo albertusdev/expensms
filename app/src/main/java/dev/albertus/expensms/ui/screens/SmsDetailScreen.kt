@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -16,7 +17,11 @@ import dev.albertus.expensms.utils.DateUtils.formatFullDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SmsDetailScreen(transaction: Transaction, onNavigateBack: () -> Unit) {
+fun SmsDetailScreen(
+    transaction: Transaction,
+    onNavigateBack: () -> Unit,
+    onForceForward: ((Transaction) -> Unit)? = null
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -24,6 +29,17 @@ fun SmsDetailScreen(transaction: Transaction, onNavigateBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    // Show force forward button only for OCBC transactions
+                    if (transaction.bank == "OCBC" && onForceForward != null) {
+                        IconButton(onClick = { onForceForward(transaction) }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Force Forward to API"
+                            )
+                        }
                     }
                 }
             )
@@ -38,6 +54,12 @@ fun SmsDetailScreen(transaction: Transaction, onNavigateBack: () -> Unit) {
             TransactionDetailsCard(transaction)
             Spacer(modifier = Modifier.height(16.dp))
             OriginalSmsCard(transaction.rawMessage)
+
+            // Show force forward button as a card for OCBC transactions
+            if (transaction.bank == "OCBC" && onForceForward != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                ForceForwardCard(transaction, onForceForward)
+            }
         }
     }
 }
@@ -106,6 +128,44 @@ fun OriginalSmsCard(rawSms: String) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onTertiaryContainer
             )
+        }
+    }
+}
+
+@Composable
+fun ForceForwardCard(transaction: Transaction, onForceForward: (Transaction) -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = "API Forwarding",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Force forward this OCBC transaction to the AI Accountant API. This will create a new API log entry.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { onForceForward(transaction) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Force Forward to API")
+            }
         }
     }
 }
