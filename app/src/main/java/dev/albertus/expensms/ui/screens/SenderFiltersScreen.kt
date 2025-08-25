@@ -25,7 +25,9 @@ fun SenderFiltersScreen(
     viewModel: SenderFiltersViewModel = hiltViewModel()
 ) {
     val senderFilters by viewModel.senderFilters.collectAsState()
+    val hasUnsavedChanges by viewModel.hasUnsavedChanges.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -37,6 +39,11 @@ fun SenderFiltersScreen(
                     }
                 },
                 actions = {
+                    if (hasUnsavedChanges) {
+                        TextButton(onClick = { showDiscardDialog = true }) {
+                            Text("Discard")
+                        }
+                    }
                     IconButton(onClick = { showAddDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Add Filter")
                     }
@@ -97,11 +104,65 @@ fun SenderFiltersScreen(
             } else {
                 LazyColumn {
                     items(senderFilters) { filter ->
+                        // Determine filter status for visual indicators
+                        val originalFilters = viewModel.originalFilters.collectAsState().value
+                        val localChanges = viewModel.changesMap.collectAsState().value
+                        val pendingAdditions = viewModel.additionsMap.collectAsState().value
+                        val pendingDeletions = viewModel.deletionsSet.collectAsState().value
+
+                        val isNewFilter = pendingAdditions.any { it.id == filter.id }
+                        val isMarkedForDeletion = pendingDeletions.contains(filter.id)
+                        val originalFilter = originalFilters.find { it.id == filter.id }
+                        val isModified = localChanges.containsKey(filter.id) && originalFilter != null
+
                         SenderFilterItem(
                             filter = filter,
                             onToggleEnabled = { viewModel.toggleFilterEnabled(filter.id) },
-                            onDelete = { viewModel.deleteFilter(filter.id) }
+                            onDelete = { viewModel.deleteFilter(filter.id) },
+                            isNewFilter = isNewFilter,
+                            isModified = isModified,
+                            isMarkedForDeletion = isMarkedForDeletion
                         )
+                    }
+                }
+            }
+
+            // Save/Apply Changes Button (sticky at bottom)
+            if (hasUnsavedChanges) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Unsaved Changes",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Save to apply changes and sync SMS",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.saveChanges() },
+                            modifier = Modifier.padding(start = 16.dp)
+                        ) {
+                            Text("Save Changes")
+                        }
                     }
                 }
             }
@@ -118,18 +179,53 @@ fun SenderFiltersScreen(
             }
         )
     }
+
+    // Discard changes confirmation dialog
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Discard Changes?") },
+            text = { Text("All unsaved changes will be lost. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.discardChanges()
+                        showDiscardDialog = false
+                    }
+                ) {
+                    Text("Discard", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun SenderFilterItem(
     filter: SenderFilter,
     onToggleEnabled: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isNewFilter: Boolean = false,
+    isModified: Boolean = false,
+    isMarkedForDeletion: Boolean = false
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = when {
+                isMarkedForDeletion -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
+                isNewFilter -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                isModified -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                else -> MaterialTheme.colorScheme.surface
+            }
+        )
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -139,11 +235,44 @@ fun SenderFilterItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = filter.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = filter.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        when {
+                            isMarkedForDeletion -> {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "DELETED",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            isNewFilter -> {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "NEW",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            isModified -> {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "MODIFIED",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = "Pattern: ${filter.filterPattern}",
                         style = MaterialTheme.typography.bodyMedium,

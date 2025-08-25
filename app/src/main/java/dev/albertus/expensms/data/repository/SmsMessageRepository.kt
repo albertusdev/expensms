@@ -84,4 +84,17 @@ class SmsMessageRepository @Inject constructor(
             syncMetadataDao.updateLastSyncTimestamp(timestamp)
         }
     }
+
+    // NEW: Hash-based duplicate detection methods
+    suspend fun getSmsMessageByContentHash(contentHash: String): SmsMessage? {
+        return withContext(Dispatchers.IO) {
+            smsMessageDao.getSmsMessageByContentHash(contentHash)
+        }
+    }
+
+    suspend fun getAllContentHashes(): Set<String> {
+        return withContext(Dispatchers.IO) {
+            smsMessageDao.getAllContentHashes().toSet()
+        }
+    }
 }

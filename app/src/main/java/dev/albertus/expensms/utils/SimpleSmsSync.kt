@@ -55,14 +55,12 @@ class SimpleSmsSync @Inject constructor(
         var storedCount = 0
 
         val smsMessagesToInsert = mutableListOf<SmsMessage>()
-        val existingSmsMessages = if (fullSync) {
-            // For full sync, get all existing SMS to avoid duplicates
-            smsMessageRepository.getAllSmsMessagesSync()
-        } else {
-            emptyList()
-        }
+        // Load existing content hashes for efficient duplicate detection
+        val existingContentHashes = smsMessageRepository.getAllContentHashes()
 
-        Log.i(TAG, "Found ${existingSmsMessages.size} existing SMS messages")
+        Log.i(TAG, "=== HASH-BASED DUPLICATE DETECTION SETUP ===")
+        Log.i(TAG, "Loaded ${existingContentHashes.size} existing content hashes for duplicate detection")
+        Log.d(TAG, "Sample existing hashes: ${existingContentHashes.take(5)}")
 
         messages.forEachIndexed { index, (sender, body, timestamp) ->
             Log.d(TAG, "Processing SMS ${index + 1}/$totalMessages:")
@@ -70,26 +68,46 @@ class SimpleSmsSync @Inject constructor(
             Log.d(TAG, "  Date: ${Date(timestamp)}")
             Log.d(TAG, "  Body: ${body.take(100)}${if (body.length > 100) "..." else ""}")
 
-            // Check if this SMS already exists (avoid duplicates)
-            val existingSms = existingSmsMessages.find { existing ->
-                existing.sender == sender &&
-                existing.rawMessage == body &&
-                existing.timestamp.time == timestamp
+            // Generate content hash for this SMS
+            val timeWindow = 5000L
+            val normalizedTimestamp = (timestamp / timeWindow) * timeWindow
+            val contentHash = SmsMessage.generateContentHash(timestamp, sender, body)
+            Log.d(TAG, "  🔍 HASH-BASED DUPLICATE CHECK")
+            Log.d(TAG, "    New SMS - Sender: '$sender'")
+            Log.d(TAG, "    New SMS - Body preview: ${body.take(50)}...")
+            Log.d(TAG, "    New SMS - Original timestamp: ${Date(timestamp)} ($timestamp)")
+            Log.d(TAG, "    New SMS - Normalized timestamp (5s window): ${Date(normalizedTimestamp)} ($normalizedTimestamp)")
+            Log.d(TAG, "    Generated content hash: $contentHash")
+
+            // Check if this hash already exists
+            val isDuplicate = existingContentHashes.contains(contentHash)
+
+            if (isDuplicate) {
+                Log.i(TAG, "  ✅ DUPLICATE DETECTED - Content hash already exists")
+                Log.i(TAG, "    Hash: $contentHash")
+            } else {
+                Log.d(TAG, "  🆕 NEW SMS - Hash not found in existing set")
             }
 
-            if (existingSms != null) {
-                Log.d(TAG, "SMS already exists, checking for filter updates...")
+            if (isDuplicate) {
+                Log.d(TAG, "  📋 SMS already exists, checking for filter updates...")
 
-                // Update existing SMS with new filter matching if needed
-                val matchedFilter = enabledFilters.find { filter ->
-                    sender.contains(filter.filterPattern, ignoreCase = true)
-                }
-                val newBankSource = matchedFilter?.name
+                // Get the existing SMS to potentially update its bank source
+                val existingSms = smsMessageRepository.getSmsMessageByContentHash(contentHash)
+                if (existingSms != null) {
+                    // Update existing SMS with new filter matching if needed
+                    val matchedFilter = enabledFilters.find { filter ->
+                        sender.contains(filter.filterPattern, ignoreCase = true)
+                    }
+                    val newBankSource = matchedFilter?.name
 
-                if (existingSms.bankSource != newBankSource) {
-                    Log.i(TAG, "Updating bank source for existing SMS: ${existingSms.bankSource} -> $newBankSource")
-                    val updatedSms = existingSms.copy(bankSource = newBankSource)
-                    smsMessageRepository.updateSmsMessage(updatedSms)
+                    if (existingSms.bankSource != newBankSource) {
+                        Log.i(TAG, "  🔄 Updating bank source for existing SMS: ${existingSms.bankSource} -> $newBankSource")
+                        val updatedSms = existingSms.copy(bankSource = newBankSource)
+                        smsMessageRepository.updateSmsMessage(updatedSms)
+                    } else {
+                        Log.d(TAG, "  ✅ No filter updates needed for existing SMS")
+                    }
                 }
 
                 latestTimestamp = maxOf(latestTimestamp, timestamp)
@@ -104,7 +122,9 @@ class SimpleSmsSync @Inject constructor(
             }
             val bankSource = matchedFilter?.name
 
-            val smsMessage = SmsMessage(
+            Log.d(TAG, "  🆕 NEW SMS - Bank source: ${bankSource ?: "None"}")
+
+            val smsMessage = SmsMessage.create(
                 id = UUID.randomUUID().toString(),
                 sender = sender,
                 rawMessage = body,
@@ -112,6 +132,7 @@ class SimpleSmsSync @Inject constructor(
                 bankSource = bankSource
             )
 
+            Log.d(TAG, "  ➕ Adding new SMS to insert queue (ID: ${smsMessage.id}, Hash: ${smsMessage.contentHash})")
             smsMessagesToInsert.add(smsMessage)
             storedCount++
             latestTimestamp = maxOf(latestTimestamp, timestamp)
@@ -132,6 +153,8 @@ class SimpleSmsSync @Inject constructor(
 
         Log.i(TAG, "=== SMS SYNC COMPLETED ===")
         Log.i(TAG, "Total processed: $totalMessages")
+        Log.i(TAG, "New SMS added: ${smsMessagesToInsert.size}")
+        Log.i(TAG, "Duplicates skipped: ${totalMessages - smsMessagesToInsert.size}")
         Log.i(TAG, "Successfully stored: $storedCount")
     }
 

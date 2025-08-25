@@ -69,8 +69,8 @@ class SimpleSmsWorker(
         Log.i(TAG, "  Filter pattern: ${matchedFilter?.filterPattern ?: "N/A"}")
         Log.i(TAG, "  Detected bank source: $bankSource")
 
-        // Create SMS message without parsing
-        val smsMessage = SmsMessage(
+        // Create SMS message with content hash for duplicate detection
+        val smsMessage = SmsMessage.create(
             id = UUID.randomUUID().toString(),
             sender = sender,
             rawMessage = body,
@@ -78,10 +78,21 @@ class SimpleSmsWorker(
             bankSource = bankSource
         )
 
+        val timeWindow = 5000L
+        val normalizedTimestamp = (timestamp / timeWindow) * timeWindow
+        Log.i(TAG, "=== HASH GENERATION ===")
+        Log.i(TAG, "Original timestamp: ${Date(timestamp)} ($timestamp)")
+        Log.i(TAG, "Normalized timestamp (5s window): ${Date(normalizedTimestamp)} ($normalizedTimestamp)")
+        Log.i(TAG, "Generated content hash: ${smsMessage.contentHash}")
+
         try {
             // Store SMS message in database
             smsMessageRepository.insertSmsMessage(smsMessage)
             Log.i(TAG, "✅ SMS message saved to database")
+
+            // Update last sync timestamp to prevent duplicates during next sync
+            smsMessageRepository.updateLastSyncTimestamp(timestamp)
+            Log.i(TAG, "✅ Updated last sync timestamp to: ${Date(timestamp)} to prevent duplicates")
 
             // Show enhanced notification for background processing
             if (isBackgroundProcessing) {

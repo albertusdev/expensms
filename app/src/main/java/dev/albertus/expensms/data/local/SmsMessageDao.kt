@@ -41,4 +41,11 @@ interface SmsMessageDao {
 
     @Query("SELECT * FROM sms_messages WHERE is_forwarded = :isForwarded AND status = :status ORDER BY timestamp DESC")
     fun getSmsMessagesByForwardingStatus(isForwarded: Boolean, status: SmsStatus = SmsStatus.ACTIVE): Flow<List<SmsMessage>>
+
+    // NEW: Hash-based duplicate detection methods
+    @Query("SELECT * FROM sms_messages WHERE content_hash = :contentHash LIMIT 1")
+    suspend fun getSmsMessageByContentHash(contentHash: String): SmsMessage?
+
+    @Query("SELECT content_hash FROM sms_messages")
+    suspend fun getAllContentHashes(): List<String>
 }
