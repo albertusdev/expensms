@@ -254,6 +254,7 @@ fun LogTypeChip(logType: ApiLogType) {
         ApiLogType.LOGIN -> MaterialTheme.colorScheme.primary
         ApiLogType.TOKEN_REFRESH -> MaterialTheme.colorScheme.secondary
         ApiLogType.SMS_FORWARD -> MaterialTheme.colorScheme.tertiary
+        ApiLogType.SMS_BATCH_FORWARD -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
         ApiLogType.CONNECTION_TEST -> MaterialTheme.colorScheme.outline
     }
     

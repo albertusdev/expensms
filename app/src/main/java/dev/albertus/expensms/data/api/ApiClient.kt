@@ -225,7 +225,8 @@ class ApiClient @Inject constructor(
     suspend fun forwardSms(
         accessToken: String,
         smsData: SmsForwardRequest,
-        transactionId: String? = null
+        transactionId: String? = null,
+        shouldLog: Boolean = true
     ): ApiResult<String> {
         return withContext(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
@@ -247,16 +248,18 @@ class ApiClient @Inject constructor(
                 val responseBody = response.body?.string()
 
                 if (response.isSuccessful) {
-                    apiLogger.logApiCall(
-                        logType = ApiLogType.SMS_FORWARD,
-                        endpoint = endpoint,
-                        httpMethod = "POST",
-                        requestBody = requestBody,
-                        responseCode = response.code,
-                        responseBody = responseBody,
-                        durationMs = duration,
-                        transactionId = transactionId
-                    )
+                    if (shouldLog) {
+                        apiLogger.logApiCall(
+                            logType = ApiLogType.SMS_FORWARD,
+                            endpoint = endpoint,
+                            httpMethod = "POST",
+                            requestBody = requestBody,
+                            responseCode = response.code,
+                            responseBody = responseBody,
+                            durationMs = duration,
+                            transactionId = transactionId
+                        )
+                    }
                     ApiResult.Success("SMS forwarded successfully")
                 } else {
                     val errorMessage = try {
@@ -265,44 +268,146 @@ class ApiClient @Inject constructor(
                         null
                     } ?: "SMS forward failed with status ${response.code}"
 
-                    apiLogger.logApiCall(
-                        logType = ApiLogType.SMS_FORWARD,
-                        endpoint = endpoint,
-                        httpMethod = "POST",
-                        requestBody = requestBody,
-                        responseCode = response.code,
-                        responseBody = responseBody,
-                        errorMessage = errorMessage,
-                        durationMs = duration,
-                        transactionId = transactionId
-                    )
+                    if (shouldLog) {
+                        apiLogger.logApiCall(
+                            logType = ApiLogType.SMS_FORWARD,
+                            endpoint = endpoint,
+                            httpMethod = "POST",
+                            requestBody = requestBody,
+                            responseCode = response.code,
+                            responseBody = responseBody,
+                            errorMessage = errorMessage,
+                            durationMs = duration,
+                            transactionId = transactionId
+                        )
+                    }
 
                     ApiResult.Error(errorMessage, response.code.toString())
                 }
             } catch (e: IOException) {
                 val duration = System.currentTimeMillis() - startTime
-                apiLogger.logApiCall(
-                    logType = ApiLogType.SMS_FORWARD,
-                    endpoint = endpoint,
-                    httpMethod = "POST",
-                    requestBody = requestBody,
-                    errorMessage = "Network error: ${e.message}",
-                    durationMs = duration,
-                    transactionId = transactionId
-                )
+                if (shouldLog) {
+                    apiLogger.logApiCall(
+                        logType = ApiLogType.SMS_FORWARD,
+                        endpoint = endpoint,
+                        httpMethod = "POST",
+                        requestBody = requestBody,
+                        errorMessage = "Network error: ${e.message}",
+                        durationMs = duration,
+                        transactionId = transactionId
+                    )
+                }
                 ApiResult.NetworkError
             } catch (e: Exception) {
                 val duration = System.currentTimeMillis() - startTime
                 val errorMsg = "Unexpected error: ${e.message}"
-                apiLogger.logApiCall(
-                    logType = ApiLogType.SMS_FORWARD,
-                    endpoint = endpoint,
-                    httpMethod = "POST",
-                    requestBody = requestBody,
-                    errorMessage = errorMsg,
-                    durationMs = duration,
-                    transactionId = transactionId
-                )
+                if (shouldLog) {
+                    apiLogger.logApiCall(
+                        logType = ApiLogType.SMS_FORWARD,
+                        endpoint = endpoint,
+                        httpMethod = "POST",
+                        requestBody = requestBody,
+                        errorMessage = errorMsg,
+                        durationMs = duration,
+                        transactionId = transactionId
+                    )
+                }
+                ApiResult.Error(errorMsg)
+            }
+        }
+    }
+
+    suspend fun forwardSmsBatch(
+        accessToken: String,
+        smsDataList: List<SmsForwardRequest>,
+        transactionIds: List<String> = emptyList(),
+        shouldLog: Boolean = true
+    ): ApiResult<SmsBatchForwardResponse> {
+        return withContext(Dispatchers.IO) {
+            val startTime = System.currentTimeMillis()
+            val endpoint = "/sms/batch"
+            val batchRequest = SmsBatchForwardRequest(messages = smsDataList)
+            val requestBody = json.encodeToString(
+                SmsBatchForwardRequest.serializer(),
+                batchRequest
+            )
+
+            try {
+                val request = Request.Builder()
+                    .url("$BASE_URL$endpoint")
+                    .addHeader("Authorization", "Bearer $accessToken")
+                    .post(requestBody.toRequestBody(CONTENT_TYPE_JSON.toMediaType()))
+                    .build()
+
+                val response = httpClient.newCall(request).execute()
+                val duration = System.currentTimeMillis() - startTime
+                val responseBody = response.body?.string()
+
+                if (response.isSuccessful && responseBody != null) {
+                    val batchResponse = json.decodeFromString<SmsBatchForwardResponse>(responseBody)
+                    if (shouldLog) {
+                        apiLogger.logApiCall(
+                            logType = ApiLogType.SMS_BATCH_FORWARD,
+                            endpoint = endpoint,
+                            httpMethod = "POST",
+                            requestBody = requestBody,
+                            responseCode = response.code,
+                            responseBody = responseBody,
+                            durationMs = duration,
+                            transactionId = transactionIds.joinToString(",")
+                        )
+                    }
+                    ApiResult.Success(batchResponse)
+                } else {
+                    val errorMessage = try {
+                        responseBody?.let { json.decodeFromString<ApiError>(it).message }
+                    } catch (e: Exception) {
+                        null
+                    } ?: "SMS batch forward failed with status ${response.code}"
+
+                    if (shouldLog) {
+                        apiLogger.logApiCall(
+                            logType = ApiLogType.SMS_BATCH_FORWARD,
+                            endpoint = endpoint,
+                            httpMethod = "POST",
+                            requestBody = requestBody,
+                            responseCode = response.code,
+                            responseBody = responseBody,
+                            errorMessage = errorMessage,
+                            durationMs = duration,
+                            transactionId = transactionIds.joinToString(",")
+                        )
+                    }
+                    ApiResult.Error(errorMessage, response.code.toString())
+                }
+            } catch (e: IOException) {
+                val duration = System.currentTimeMillis() - startTime
+                if (shouldLog) {
+                    apiLogger.logApiCall(
+                        logType = ApiLogType.SMS_BATCH_FORWARD,
+                        endpoint = endpoint,
+                        httpMethod = "POST",
+                        requestBody = requestBody,
+                        errorMessage = "Network error: ${e.message}",
+                        durationMs = duration,
+                        transactionId = transactionIds.joinToString(",")
+                    )
+                }
+                ApiResult.NetworkError
+            } catch (e: Exception) {
+                val duration = System.currentTimeMillis() - startTime
+                val errorMsg = "Unexpected error: ${e.message}"
+                if (shouldLog) {
+                    apiLogger.logApiCall(
+                        logType = ApiLogType.SMS_BATCH_FORWARD,
+                        endpoint = endpoint,
+                        httpMethod = "POST",
+                        requestBody = requestBody,
+                        errorMessage = errorMsg,
+                        durationMs = duration,
+                        transactionId = transactionIds.joinToString(",")
+                    )
+                }
                 ApiResult.Error(errorMsg)
             }
         }

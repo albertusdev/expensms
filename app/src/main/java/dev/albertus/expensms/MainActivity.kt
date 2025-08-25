@@ -2,20 +2,27 @@ package dev.albertus.expensms
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -23,55 +30,68 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import dev.albertus.expensms.data.model.SmsMessage
 import dev.albertus.expensms.ui.screens.ApiLogsScreen
 import dev.albertus.expensms.ui.screens.ErrorScreen
-import dev.albertus.expensms.ui.screens.MainScreen
 import dev.albertus.expensms.ui.screens.PermissionScreen
+import dev.albertus.expensms.ui.screens.SenderFiltersScreen
 import dev.albertus.expensms.ui.screens.SettingsScreen
-import dev.albertus.expensms.ui.screens.SmsDetailScreen
-import dev.albertus.expensms.ui.screens.TrashBinScreen
+import dev.albertus.expensms.ui.screens.SmsMainScreen
+import dev.albertus.expensms.ui.screens.SmsMessageDetailScreen
 import dev.albertus.expensms.ui.viewModels.ApiLogsViewModel
 import dev.albertus.expensms.ui.theme.ExpenSMSTheme
-import dev.albertus.expensms.ui.viewModels.MainViewModel
-import dev.albertus.expensms.utils.SmsForwardingService
+import dev.albertus.expensms.ui.viewModels.SmsMainViewModel
+import dev.albertus.expensms.utils.SimpleSmsForwardingService
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private lateinit var permissionState: MutableState<Boolean>
-    private val viewModel: MainViewModel by viewModels()
+    private lateinit var smsPermissionState: MutableState<Boolean>
+    private lateinit var notificationPermissionState: MutableState<Boolean>
+    private val smsMainViewModel: SmsMainViewModel by viewModels()
     private val apiLogsViewModel: ApiLogsViewModel by viewModels()
 
     @Inject
-    lateinit var smsForwardingService: SmsForwardingService
+    lateinit var simpleSmsForwardingService: SimpleSmsForwardingService
 
-
-    private val requestPermissionLauncher = registerForActivityResult(
+    private val requestSmsPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
-        permissionState.value = isGranted
+        smsPermissionState.value = isGranted
         if (isGranted) {
-            viewModel.loadSmsMessages()
+            // Trigger SMS sync when permission is granted
+            smsMainViewModel.syncSmsMessages(fullSync = true)
         }
+    }
+
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        notificationPermissionState.value = isGranted
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ExpenSMSTheme {
-                permissionState = remember { mutableStateOf(checkPermission()) }
+                smsPermissionState = remember { mutableStateOf(checkSmsPermission()) }
+                notificationPermissionState = remember { mutableStateOf(checkNotificationPermission()) }
                 val navController = rememberNavController()
                 val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
                 val scope = rememberCoroutineScope()
@@ -93,12 +113,13 @@ class MainActivity : ComponentActivity() {
                                     scope.launch { drawerState.close() }
                                 }
                             )
+
                             NavigationDrawerItem(
-                                icon = { Icon(Icons.Default.Delete, contentDescription = null) },
-                                label = { Text("Trash Bin") },
+                                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
+                                label = { Text("API Logs") },
                                 selected = false,
                                 onClick = {
-                                    navController.navigate("trashBin") {
+                                    navController.navigate("apiLogs") {
                                         popUpTo(navController.graph.startDestinationId)
                                         launchSingleTop = true
                                     }
@@ -106,11 +127,11 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                             NavigationDrawerItem(
-                                icon = { Icon(Icons.AutoMirrored.Filled.List, contentDescription = null) },
-                                label = { Text("API Logs") },
+                                icon = { Icon(Icons.Default.FilterList, contentDescription = null) },
+                                label = { Text("Sender Filters") },
                                 selected = false,
                                 onClick = {
-                                    navController.navigate("apiLogs") {
+                                    navController.navigate("senderFilters") {
                                         popUpTo(navController.graph.startDestinationId)
                                         launchSingleTop = true
                                     }
@@ -134,13 +155,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     NavHost(
                         navController,
-                        startDestination = if (permissionState.value) "main" else "permission",
+                        startDestination = if (smsPermissionState.value && notificationPermissionState.value) "main" else "permission",
                     ) {
                         composable("permission") {
                             PermissionScreen(
-                                onRequestPermission = {
-                                    requestSmsPermission()
-                                }
+                                hasSmsPermission = smsPermissionState.value,
+                                hasNotificationPermission = notificationPermissionState.value,
+                                onRequestSmsPermission = { requestSmsPermission() },
+                                onRequestNotificationPermission = { requestNotificationPermission() }
                             )
                         }
                         composable(
@@ -170,11 +192,9 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         ) {
-                            MainScreen(
-                                viewModel = viewModel,
-                                onNavigateToSettings = { navController.navigate("settings") },
+                            SmsMainScreen(
                                 onNavigateToSmsDetail = { id -> navController.navigate("smsDetail/$id") },
-                                onOpenDrawer = { scope.launch { drawerState.open() } }
+                                drawerState = drawerState
                             )
                         }
                         composable(
@@ -205,12 +225,11 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             SettingsScreen(
-                                viewModel = viewModel,
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
                         composable(
-                            route = "smsDetail/{transactionId}",
+                            route = "smsDetail/{smsMessageId}",
                             enterTransition = {
                                 slideIntoContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Left,
@@ -236,25 +255,63 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         ) { backStackEntry ->
-                            val transactionId = backStackEntry.arguments?.getString("transactionId")
-                            val transaction = viewModel.getTransactionById(transactionId)
-                            if (transaction != null) {
-                                SmsDetailScreen(
-                                    transaction = transaction,
-                                    onNavigateBack = { navController.popBackStack() },
-                                    onForceForward = { transactionToForward ->
-                                        smsForwardingService.forwardTransactionIfEnabled(transactionToForward)
-                                    }
-                                )
+                            val smsMessageId = backStackEntry.arguments?.getString("smsMessageId")
+                            Log.d("MainActivity", "Looking for SMS with ID: $smsMessageId")
+
+                            // Use a state to hold the SMS message from database if needed
+                            var smsMessage by remember { mutableStateOf<SmsMessage?>(null) }
+                            var isLoading by remember { mutableStateOf(true) }
+
+                            // First try to get from StateFlow
+                            val smsFromStateFlow = smsMainViewModel.getSmsMessageById(smsMessageId)
+                            Log.d("MainActivity", "Found SMS in StateFlow: ${smsFromStateFlow?.id}")
+
+                            // If found in StateFlow, use it immediately
+                            if (smsFromStateFlow != null) {
+                                smsMessage = smsFromStateFlow
+                                isLoading = false
+                            } else if (smsMessageId != null) {
+                                // If not found in StateFlow, try database directly (for timing issues)
+                                Log.d("MainActivity", "SMS not found in StateFlow, checking database...")
+                                LaunchedEffect(smsMessageId) {
+                                    val smsFromDb = smsMainViewModel.getSmsMessageByIdFromDb(smsMessageId)
+                                    Log.d("MainActivity", "Found SMS in database: ${smsFromDb?.id}")
+                                    smsMessage = smsFromDb
+                                    isLoading = false
+                                }
                             } else {
-                                ErrorScreen(
-                                    message = "Transaction not found",
-                                    onNavigateBack = { navController.popBackStack() }
-                                )
+                                isLoading = false
+                            }
+
+                            when {
+                                isLoading -> {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = androidx.compose.ui.Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                                smsMessage != null -> {
+                                    val currentSms = smsMessage!!
+                                    SmsMessageDetailScreen(
+                                        smsMessage = currentSms,
+                                        onNavigateBack = { navController.popBackStack() },
+                                        onForceForward = { smsMessageToForward ->
+                                            simpleSmsForwardingService.forwardSmsMessageIfEnabled(smsMessageToForward)
+                                        }
+                                    )
+                                }
+                                else -> {
+                                    ErrorScreen(
+                                        message = "SMS message not found",
+                                        onNavigateBack = { navController.popBackStack() }
+                                    )
+                                }
                             }
                         }
                         composable(
-                            route = "trashBin",
+                            route = "senderFilters",
                             enterTransition = {
                                 slideIntoContainer(
                                     towards = AnimatedContentTransitionScope.SlideDirection.Left,
@@ -280,8 +337,7 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         ) {
-                            TrashBinScreen(
-                                viewModel = viewModel,
+                            SenderFiltersScreen(
                                 onNavigateBack = { navController.popBackStack() }
                             )
                         }
@@ -324,14 +380,31 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun checkPermission(): Boolean {
+    private fun checkSmsPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.READ_SMS
         ) == PackageManager.PERMISSION_GRANTED
     }
 
+    private fun checkNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Notification permission not required for older versions
+        }
+    }
+
     private fun requestSmsPermission() {
-        requestPermissionLauncher.launch(Manifest.permission.READ_SMS)
+        requestSmsPermissionLauncher.launch(Manifest.permission.READ_SMS)
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 }

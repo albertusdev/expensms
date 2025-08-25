@@ -26,6 +26,7 @@ enum class ApiLogType {
     LOGIN,
     TOKEN_REFRESH,
     SMS_FORWARD,
+    SMS_BATCH_FORWARD,
     CONNECTION_TEST
 }
 

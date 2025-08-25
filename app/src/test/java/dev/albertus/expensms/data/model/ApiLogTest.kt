@@ -94,6 +94,7 @@ class ApiLogTest {
         assertEquals("LOGIN", ApiLogType.LOGIN.name)
         assertEquals("TOKEN_REFRESH", ApiLogType.TOKEN_REFRESH.name)
         assertEquals("SMS_FORWARD", ApiLogType.SMS_FORWARD.name)
+        assertEquals("SMS_BATCH_FORWARD", ApiLogType.SMS_BATCH_FORWARD.name)
         assertEquals("CONNECTION_TEST", ApiLogType.CONNECTION_TEST.name)
     }
 

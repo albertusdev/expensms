@@ -1,6 +1,7 @@
 package dev.albertus.expensms.data.api
 
 import dev.albertus.expensms.data.model.ApiLogType
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
@@ -126,12 +127,13 @@ class ApiModelsTest {
     fun `ApiLogType enum should have all expected values`() {
         // When/Then
         val logTypes = ApiLogType.values()
-        
+
         assertTrue(logTypes.contains(ApiLogType.LOGIN))
         assertTrue(logTypes.contains(ApiLogType.TOKEN_REFRESH))
         assertTrue(logTypes.contains(ApiLogType.SMS_FORWARD))
+        assertTrue(logTypes.contains(ApiLogType.SMS_BATCH_FORWARD))
         assertTrue(logTypes.contains(ApiLogType.CONNECTION_TEST))
-        assertEquals(4, logTypes.size)
+        assertEquals(5, logTypes.size)
     }
 
     @Test
@@ -172,5 +174,117 @@ class ApiModelsTest {
         // Then
         assertEquals(message, apiError.message)
         assertEquals(code, apiError.code)
+    }
+
+    @Test
+    fun `SmsBatchForwardRequest should be created correctly`() {
+        // Given
+        val message1 = SmsForwardRequest("Test message 1", "OCBC", 1234567890L)
+        val message2 = SmsForwardRequest("Test message 2", "OCBC", 1234567891L)
+        val messages = listOf(message1, message2)
+
+        // When
+        val batchRequest = SmsBatchForwardRequest(messages)
+
+        // Then
+        assertEquals(messages, batchRequest.messages)
+        assertEquals(2, batchRequest.messages.size)
+    }
+
+    @Test
+    fun `SmsBatchForwardResponse should be created correctly`() {
+        // Given
+        val result1 = SmsBatchResult(success = true)
+        val result2 = SmsBatchResult(success = false, error = "Test error")
+        val results = listOf(result1, result2)
+        val summary = SmsBatchSummary(total = 2, stored = 1, failed = 1, queued = 1)
+
+        // When
+        val response = SmsBatchForwardResponse(
+            success = true,
+            results = results,
+            summary = summary
+        )
+
+        // Then
+        assertTrue(response.success)
+        assertEquals(results, response.results)
+        assertEquals(summary, response.summary)
+        assertEquals(2, response.results.size)
+    }
+
+    @Test
+    fun `SmsBatchSummary should be created correctly`() {
+        // Given
+        val total = 10
+        val stored = 8
+        val failed = 2
+        val queued = 8
+
+        // When
+        val summary = SmsBatchSummary(total, stored, failed, queued)
+
+        // Then
+        assertEquals(total, summary.total)
+        assertEquals(stored, summary.stored)
+        assertEquals(failed, summary.failed)
+        assertEquals(queued, summary.queued)
+    }
+
+    @Test
+    fun `SmsBatchResult should handle success case correctly`() {
+        // Given
+        val smsInfo = SmsInfo("sms_123", "OCBC", "2023-01-01T10:00:00Z", "2023-01-01T10:00:00Z")
+        val processingAttempt = ProcessingAttemptInfo("attempt_123", "pending")
+        val workflow = WorkflowInfo("workflow_123", "queued")
+
+        // When
+        val result = SmsBatchResult(
+            success = true,
+            sms = smsInfo,
+            processingAttempt = processingAttempt,
+            workflow = workflow
+        )
+
+        // Then
+        assertTrue(result.success == true)
+        assertEquals(smsInfo, result.sms)
+        assertEquals(processingAttempt, result.processingAttempt)
+        assertEquals(workflow, result.workflow)
+        assertNull(result.error)
+        assertNull(result.warning)
+    }
+
+    @Test
+    fun `WorkflowInfo should handle missing instanceId correctly`() {
+        // Given - API response without instanceId (like the actual API response)
+        val workflowJson = """{"status":"queued"}"""
+
+        // When
+        val workflow = Json.decodeFromString<WorkflowInfo>(workflowJson)
+
+        // Then
+        assertNull(workflow.instanceId)
+        assertEquals("queued", workflow.status)
+    }
+
+    @Test
+    fun `SmsBatchResult should handle error case correctly`() {
+        // Given
+        val errorMessage = "Invalid SMS format"
+
+        // When
+        val result = SmsBatchResult(
+            success = false,
+            error = errorMessage
+        )
+
+        // Then
+        assertTrue(result.success == false)
+        assertEquals(errorMessage, result.error)
+        assertNull(result.sms)
+        assertNull(result.processingAttempt)
+        assertNull(result.workflow)
+        assertNull(result.warning)
     }
 }

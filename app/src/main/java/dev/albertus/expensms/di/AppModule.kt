@@ -16,13 +16,20 @@ import dev.albertus.expensms.data.api.ApiLogger
 import dev.albertus.expensms.data.api.ApiService
 import dev.albertus.expensms.data.local.ApiLogDao
 import dev.albertus.expensms.data.local.AppDatabase
+import dev.albertus.expensms.data.local.SenderFilterDao
+import dev.albertus.expensms.data.local.SmsMessageDao
 import dev.albertus.expensms.data.local.SyncMetadataDao
 import dev.albertus.expensms.data.local.TransactionDao
+import dev.albertus.expensms.data.repository.SenderFilterRepository
+import dev.albertus.expensms.data.repository.SmsMessageRepository
 import dev.albertus.expensms.data.repository.TransactionRepository
+import dev.albertus.expensms.data.repository.UserPreferencesRepository
 import dev.albertus.expensms.data.serializer.UserPreferencesSerializer
 import dev.albertus.expensms.utils.SecureStorage
-import dev.albertus.expensms.utils.SmsForwardingService
-import dev.albertus.expensms.utils.SmsSync
+import dev.albertus.expensms.utils.SimpleSmsForwardingService
+import dev.albertus.expensms.utils.SimpleSmsSync
+import dev.albertus.expensms.utils.NotificationService
+
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -81,6 +88,31 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideSmsMessageRepository(
+        smsMessageDao: SmsMessageDao,
+        syncMetadataDao: SyncMetadataDao
+    ): SmsMessageRepository {
+        return SmsMessageRepository(smsMessageDao, syncMetadataDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSenderFilterRepository(
+        senderFilterDao: SenderFilterDao
+    ): SenderFilterRepository {
+        return SenderFilterRepository(senderFilterDao)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserPreferencesRepository(
+        userPreferencesDataStore: DataStore<UserPreferences>
+    ): UserPreferencesRepository {
+        return UserPreferencesRepository(userPreferencesDataStore)
+    }
+
+    @Provides
+    @Singleton
     fun provideTransactionDao(database: AppDatabase): TransactionDao {
         return database.transactionDao()
     }
@@ -99,11 +131,36 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSmsSync(
+    fun provideSmsMessageDao(database: AppDatabase): SmsMessageDao {
+        return database.smsMessageDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideSenderFilterDao(database: AppDatabase): SenderFilterDao {
+        return database.senderFilterDao()
+    }
+
+
+
+    @Provides
+    @Singleton
+    fun provideSimpleSmsSync(
         contentResolver: ContentResolver,
-        transactionRepository: TransactionRepository
-    ): SmsSync {
-        return SmsSync(contentResolver, transactionRepository)
+        smsMessageRepository: SmsMessageRepository,
+        senderFilterRepository: SenderFilterRepository
+    ): SimpleSmsSync {
+        return SimpleSmsSync(contentResolver, smsMessageRepository, senderFilterRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSimpleSmsForwardingService(
+        apiService: ApiService,
+        smsMessageRepository: SmsMessageRepository,
+        @ApplicationScope coroutineScope: CoroutineScope
+    ): SimpleSmsForwardingService {
+        return SimpleSmsForwardingService(apiService, smsMessageRepository, coroutineScope)
     }
 
     @Provides
@@ -146,20 +203,26 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSmsForwardingService(
-        apiService: ApiService,
-        @ApplicationScope coroutineScope: CoroutineScope
-    ): SmsForwardingService {
-        return SmsForwardingService(apiService, coroutineScope)
+    fun provideNotificationService(@ApplicationContext context: Context): NotificationService {
+        return NotificationService(context)
     }
+
+
 
     @Provides
     @Singleton
     fun provideWorkerFactory(
-        transactionRepository: TransactionRepository,
-        smsForwardingService: SmsForwardingService
+        smsMessageRepository: SmsMessageRepository,
+        senderFilterRepository: SenderFilterRepository,
+        simpleSmsForwardingService: SimpleSmsForwardingService,
+        notificationService: NotificationService
     ): ExpenSMSWorkerFactory {
-        return ExpenSMSWorkerFactory(transactionRepository, smsForwardingService)
+        return ExpenSMSWorkerFactory(
+            smsMessageRepository,
+            senderFilterRepository,
+            simpleSmsForwardingService,
+            notificationService
+        )
     }
 }
 

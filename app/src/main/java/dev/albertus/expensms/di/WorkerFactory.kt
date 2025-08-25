@@ -4,16 +4,20 @@ import android.content.Context
 import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
-import dev.albertus.expensms.data.repository.TransactionRepository
-import dev.albertus.expensms.utils.SmsForwardingService
-import dev.albertus.expensms.worker.SmsParserWorker
+import dev.albertus.expensms.data.repository.SenderFilterRepository
+import dev.albertus.expensms.data.repository.SmsMessageRepository
+import dev.albertus.expensms.utils.SimpleSmsForwardingService
+import dev.albertus.expensms.utils.NotificationService
+import dev.albertus.expensms.worker.SimpleSmsWorker
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ExpenSMSWorkerFactory @Inject constructor(
-    private val transactionRepository: TransactionRepository,
-    private val smsForwardingService: SmsForwardingService
+    private val smsMessageRepository: SmsMessageRepository,
+    private val senderFilterRepository: SenderFilterRepository,
+    private val simpleSmsForwardingService: SimpleSmsForwardingService,
+    private val notificationService: NotificationService
 ) : WorkerFactory() {
 
     override fun createWorker(
@@ -22,8 +26,8 @@ class ExpenSMSWorkerFactory @Inject constructor(
         workerParameters: WorkerParameters
     ): ListenableWorker? {
         return when (workerClassName) {
-            SmsParserWorker::class.java.name -> {
-                SmsParserWorker(appContext, workerParameters, transactionRepository, smsForwardingService)
+            SimpleSmsWorker::class.java.name -> {
+                SimpleSmsWorker(appContext, workerParameters, smsMessageRepository, senderFilterRepository, simpleSmsForwardingService, notificationService)
             }
             else -> null
         }

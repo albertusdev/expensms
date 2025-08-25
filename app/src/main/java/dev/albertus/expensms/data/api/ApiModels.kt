@@ -40,6 +40,63 @@ data class SmsForwardRequest(
 )
 
 @Serializable
+data class SmsBatchForwardRequest(
+    val messages: List<SmsForwardRequest>
+)
+
+@Serializable
+data class SmsForwardResponse(
+    val success: Boolean,
+    val result: SmsBatchResult
+)
+
+@Serializable
+data class SmsBatchForwardResponse(
+    val success: Boolean,
+    val results: List<SmsBatchResult>,
+    val summary: SmsBatchSummary
+)
+
+@Serializable
+data class SmsBatchResult(
+    val success: Boolean? = null,
+    val error: String? = null,
+    val message: String? = null,
+    val warning: String? = null,
+    val sms: SmsInfo? = null,
+    val processingAttempt: ProcessingAttemptInfo? = null,
+    val workflow: WorkflowInfo? = null
+)
+
+@Serializable
+data class SmsInfo(
+    val id: String,
+    val sender: String,
+    val timestamp: String,
+    val created_at: String
+)
+
+@Serializable
+data class ProcessingAttemptInfo(
+    val id: String,
+    val status: String
+)
+
+@Serializable
+data class WorkflowInfo(
+    val instanceId: String? = null,
+    val status: String
+)
+
+@Serializable
+data class SmsBatchSummary(
+    val total: Int,
+    val stored: Int,
+    val failed: Int,
+    val queued: Int
+)
+
+@Serializable
 data class ApiError(
     val message: String,
     val code: String? = null
