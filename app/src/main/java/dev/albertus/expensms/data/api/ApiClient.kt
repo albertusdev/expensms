@@ -230,7 +230,7 @@ class ApiClient @Inject constructor(
     ): ApiResult<String> {
         return withContext(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
-            val endpoint = "/transactions/sms"
+            val endpoint = "/sms/"
             val requestBody = json.encodeToString(
                 SmsForwardRequest.serializer(),
                 smsData
@@ -248,18 +248,17 @@ class ApiClient @Inject constructor(
                 val responseBody = response.body?.string()
 
                 if (response.isSuccessful) {
-                    if (shouldLog) {
-                        apiLogger.logApiCall(
-                            logType = ApiLogType.SMS_FORWARD,
-                            endpoint = endpoint,
-                            httpMethod = "POST",
-                            requestBody = requestBody,
-                            responseCode = response.code,
-                            responseBody = responseBody,
-                            durationMs = duration,
-                            transactionId = transactionId
-                        )
-                    }
+                    // Always log successful API calls
+                    apiLogger.logApiCall(
+                        logType = ApiLogType.SMS_FORWARD,
+                        endpoint = endpoint,
+                        httpMethod = "POST",
+                        requestBody = requestBody,
+                        responseCode = response.code,
+                        responseBody = responseBody,
+                        durationMs = duration,
+                        transactionId = transactionId
+                    )
                     ApiResult.Success("SMS forwarded successfully")
                 } else {
                     val errorMessage = try {
@@ -268,6 +267,7 @@ class ApiClient @Inject constructor(
                         null
                     } ?: "SMS forward failed with status ${response.code}"
 
+                    // Only log failures when shouldLog is true (to suppress retry failures)
                     if (shouldLog) {
                         apiLogger.logApiCall(
                             logType = ApiLogType.SMS_FORWARD,
@@ -345,18 +345,17 @@ class ApiClient @Inject constructor(
 
                 if (response.isSuccessful && responseBody != null) {
                     val batchResponse = json.decodeFromString<SmsBatchForwardResponse>(responseBody)
-                    if (shouldLog) {
-                        apiLogger.logApiCall(
-                            logType = ApiLogType.SMS_BATCH_FORWARD,
-                            endpoint = endpoint,
-                            httpMethod = "POST",
-                            requestBody = requestBody,
-                            responseCode = response.code,
-                            responseBody = responseBody,
-                            durationMs = duration,
-                            transactionId = transactionIds.joinToString(",")
-                        )
-                    }
+                    // Always log successful API calls
+                    apiLogger.logApiCall(
+                        logType = ApiLogType.SMS_BATCH_FORWARD,
+                        endpoint = endpoint,
+                        httpMethod = "POST",
+                        requestBody = requestBody,
+                        responseCode = response.code,
+                        responseBody = responseBody,
+                        durationMs = duration,
+                        transactionId = transactionIds.joinToString(",")
+                    )
                     ApiResult.Success(batchResponse)
                 } else {
                     val errorMessage = try {
@@ -365,6 +364,7 @@ class ApiClient @Inject constructor(
                         null
                     } ?: "SMS batch forward failed with status ${response.code}"
 
+                    // Only log failures when shouldLog is true (to suppress retry failures)
                     if (shouldLog) {
                         apiLogger.logApiCall(
                             logType = ApiLogType.SMS_BATCH_FORWARD,

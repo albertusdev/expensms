@@ -49,8 +49,8 @@ fun PermissionScreen(
 
                 // SMS Permission
                 PermissionItem(
-                    title = "SMS Permission",
-                    description = "Required to read and receive SMS messages for processing",
+                    title = "SMS Permissions",
+                    description = "Required to read existing SMS and receive new SMS messages in background for automatic processing and forwarding",
                     isGranted = hasSmsPermission,
                     onRequest = onRequestSmsPermission
                 )

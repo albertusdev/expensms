@@ -51,12 +51,12 @@ fun SmsMainScreen(
     var showForwardConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    // Get bank count for forward button
+    // Get bank count for forward button using configurable sender filters
     val bankCount = remember(selectedSmsMessages) {
         selectedSmsMessages.count { id ->
             filteredSmsMessages.values.flatten().find { it.id == id }?.let { sms ->
-                sms.sender.contains("OCBC", ignoreCase = true) ||
-                sms.sender.contains("UOB", ignoreCase = true)
+                // Use bankSource field which is set by configurable sender filters
+                sms.bankSource != null
             } ?: false
         }
     }

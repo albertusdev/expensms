@@ -70,12 +70,22 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var simpleSmsForwardingService: SimpleSmsForwardingService
 
-    private val requestSmsPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        smsPermissionState.value = isGranted
-        if (isGranted) {
-            // Trigger SMS sync when permission is granted
+    private val requestSmsPermissionsLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val readSmsGranted = permissions[Manifest.permission.READ_SMS] ?: false
+        val receiveSmsGranted = permissions[Manifest.permission.RECEIVE_SMS] ?: false
+        val allSmsPermissionsGranted = readSmsGranted && receiveSmsGranted
+
+        smsPermissionState.value = allSmsPermissionsGranted
+
+        Log.i("MainActivity", "SMS Permissions Result:")
+        Log.i("MainActivity", "  READ_SMS: $readSmsGranted")
+        Log.i("MainActivity", "  RECEIVE_SMS: $receiveSmsGranted")
+        Log.i("MainActivity", "  All granted: $allSmsPermissionsGranted")
+
+        if (allSmsPermissionsGranted) {
+            // Trigger SMS sync when all permissions are granted
             smsMainViewModel.syncSmsMessages(fullSync = true)
         }
     }
@@ -381,10 +391,24 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkSmsPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
+        val readSmsGranted = ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.READ_SMS
         ) == PackageManager.PERMISSION_GRANTED
+
+        val receiveSmsGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECEIVE_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        val allGranted = readSmsGranted && receiveSmsGranted
+
+        Log.d("MainActivity", "SMS Permissions Check:")
+        Log.d("MainActivity", "  READ_SMS: $readSmsGranted")
+        Log.d("MainActivity", "  RECEIVE_SMS: $receiveSmsGranted")
+        Log.d("MainActivity", "  All granted: $allGranted")
+
+        return allGranted
     }
 
     private fun checkNotificationPermission(): Boolean {
@@ -399,7 +423,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestSmsPermission() {
-        requestSmsPermissionLauncher.launch(Manifest.permission.READ_SMS)
+        Log.i("MainActivity", "Requesting SMS permissions (READ_SMS + RECEIVE_SMS)")
+        requestSmsPermissionsLauncher.launch(
+            arrayOf(
+                Manifest.permission.READ_SMS,
+                Manifest.permission.RECEIVE_SMS
+            )
+        )
     }
 
     private fun requestNotificationPermission() {

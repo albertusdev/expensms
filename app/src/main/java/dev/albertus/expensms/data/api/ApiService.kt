@@ -183,6 +183,8 @@ class ApiService @Inject constructor(
     ): ApiResult<T> {
         var lastError: ApiResult.Error? = null
 
+        var isRetryAttempt = false
+
         for (attempt in 0..MAX_RETRY_ATTEMPTS) {
             Log.d(TAG, "=== $operationName - Attempt ${attempt + 1}/${MAX_RETRY_ATTEMPTS + 1} ===")
 
@@ -201,11 +203,10 @@ class ApiService @Inject constructor(
                 return ApiResult.Error(errorMessage)
             }
 
-            // Only log on the final attempt (after all retries)
-            val shouldLog = attempt == MAX_RETRY_ATTEMPTS
-
-            // Execute the operation
-            val result = operation(accessToken, shouldLog)
+            // For retry attempts due to token issues, we suppress failure logging but allow success logging
+            // For first attempts or non-token retries, we log everything
+            val shouldLogFailures = !isRetryAttempt
+            val result = operation(accessToken, shouldLogFailures)
 
             when (result) {
                 is ApiResult.Success -> {
@@ -231,6 +232,7 @@ class ApiService @Inject constructor(
                             val hasCredentials = hasStoredCredentials()
                             Log.i(TAG, "⏳ Retrying $operationName with fresh authentication...")
                             Log.i(TAG, "   Available fallback: ${if (hasCredentials) "✅ Stored credentials" else "❌ No credentials"}")
+                            isRetryAttempt = true // Mark subsequent attempts as retries
                             continue
                         } else {
                             Log.w(TAG, "❌ Max retries reached, authentication recovery failed")
@@ -287,7 +289,7 @@ class ApiService @Inject constructor(
         // Use retry logic with automatic token refresh
         return executeWithRetry(
             operation = { accessToken, shouldLog ->
-                Log.d(TAG, "Calling API client with token... (shouldLog: $shouldLog)")
+                Log.d(TAG, "Calling API client with token...")
                 apiClient.forwardSms(accessToken, smsData, smsMessage.id, shouldLog)
             },
             operationName = "Forward SMS Message"
@@ -323,7 +325,7 @@ class ApiService @Inject constructor(
         // Use retry logic with automatic token refresh
         return executeWithRetry(
             operation = { accessToken, shouldLog ->
-                Log.d(TAG, "Calling batch API client with token... (shouldLog: $shouldLog)")
+                Log.d(TAG, "Calling batch API client with token...")
                 apiClient.forwardSmsBatch(accessToken, smsDataList, emptyList(), shouldLog)
             },
             operationName = "Forward SMS Batch"
