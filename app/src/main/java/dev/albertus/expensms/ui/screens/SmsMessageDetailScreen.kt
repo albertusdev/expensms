@@ -7,11 +7,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import dev.albertus.expensms.data.model.SmsMessage
+import dev.albertus.expensms.ui.components.SmsApiLogsCard
+import dev.albertus.expensms.ui.viewModels.SmsDetailViewModel
 import dev.albertus.expensms.utils.DateUtils.formatFullDateTime
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -19,8 +22,15 @@ import dev.albertus.expensms.utils.DateUtils.formatFullDateTime
 fun SmsMessageDetailScreen(
     smsMessage: SmsMessage,
     onNavigateBack: () -> Unit,
-    onForceForward: ((SmsMessage) -> Unit)? = null
+    onForceForward: ((SmsMessage) -> Unit)? = null,
+    viewModel: SmsDetailViewModel = hiltViewModel()
 ) {
+    // Load API logs for this SMS message
+    LaunchedEffect(smsMessage.id) {
+        viewModel.loadApiLogs(smsMessage.id)
+    }
+
+    val apiLogs by viewModel.apiLogs.collectAsState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -53,6 +63,12 @@ fun SmsMessageDetailScreen(
             SmsDetailsCard(smsMessage)
             Spacer(modifier = Modifier.height(16.dp))
             SmsContentCard(smsMessage.rawMessage)
+
+            // Show API logs if SMS has been forwarded
+            if (smsMessage.isForwarded && apiLogs.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                SmsApiLogsCard(apiLogs = apiLogs)
+            }
 
             // Show force forward button as a card for bank SMS that haven't been forwarded
             if (smsMessage.bankSource != null && !smsMessage.isForwarded && onForceForward != null) {

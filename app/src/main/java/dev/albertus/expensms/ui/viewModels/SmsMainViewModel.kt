@@ -38,8 +38,7 @@ class SmsMainViewModel @Inject constructor(
     private val _selectedSmsMessages = MutableStateFlow<Set<String>>(emptySet())
     val selectedSmsMessages: StateFlow<Set<String>> = _selectedSmsMessages.asStateFlow()
 
-    private val _deleteMode = MutableStateFlow(false)
-    val deleteMode: StateFlow<Boolean> = _deleteMode.asStateFlow()
+
 
     private val _selectionMode = MutableStateFlow(SelectionMode.NONE)
     val selectionMode: StateFlow<SelectionMode> = _selectionMode.asStateFlow()
@@ -171,6 +170,29 @@ class SmsMainViewModel @Inject constructor(
         Log.i(TAG, "Deselected all SMS messages")
     }
 
+    fun selectAllUnforwarded() {
+        Log.i(TAG, "=== SELECT ALL UNFORWARDED SMS ===")
+
+        // Get all unforwarded SMS from current filtered view
+        val unforwardedSmsIds = filteredSmsMessages.value.values.flatten()
+            .filter { !it.isForwarded }
+            .map { it.id }
+            .toSet()
+
+        Log.i(TAG, "Found ${unforwardedSmsIds.size} unforwarded SMS messages in current view")
+
+        if (unforwardedSmsIds.isNotEmpty()) {
+            _selectedSmsMessages.value = unforwardedSmsIds
+            // Enter multi-select mode if not already in selection mode
+            if (_selectionMode.value == SelectionMode.NONE) {
+                _selectionMode.value = SelectionMode.MULTI_SELECT
+            }
+            Log.i(TAG, "✅ Selected ${unforwardedSmsIds.size} unforwarded SMS messages")
+        } else {
+            Log.i(TAG, "No unforwarded SMS messages found in current view")
+        }
+    }
+
     fun getFilteredSmsMessagesCount(): Int {
         return filteredSmsMessages.value.values.flatten().size
     }
@@ -191,16 +213,10 @@ class SmsMainViewModel @Inject constructor(
     // Selection mode management
     fun setSelectionMode(mode: SelectionMode) {
         _selectionMode.value = mode
-        _deleteMode.value = (mode == SelectionMode.DELETE)
         if (mode == SelectionMode.NONE) {
             _selectedSmsMessages.value = emptySet()
         }
         Log.i(TAG, "Selection mode: $mode")
-    }
-
-    // Delete mode management (backward compatibility)
-    fun setDeleteMode(enabled: Boolean) {
-        setSelectionMode(if (enabled) SelectionMode.DELETE else SelectionMode.NONE)
     }
 
     // Enter selection mode and select the given SMS
@@ -211,25 +227,6 @@ class SmsMainViewModel @Inject constructor(
     }
 
     // SMS message operations
-    fun deleteSelectedSmsMessages() {
-        Log.i(TAG, "=== DELETE SELECTED SMS MESSAGES ===")
-        val selectedSms = getSelectedSmsMessages()
-        Log.i(TAG, "Deleting ${selectedSms.size} SMS messages")
-
-        viewModelScope.launch {
-            try {
-                smsMessageRepository.deleteSmsMessages(selectedSms.map { it.id })
-                Log.i(TAG, "✅ Successfully deleted ${selectedSms.size} SMS messages")
-                
-                // Clear selection and exit delete mode
-                _selectedSmsMessages.value = emptySet()
-                _deleteMode.value = false
-                _selectionMode.value = SelectionMode.NONE
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Failed to delete SMS messages", e)
-            }
-        }
-    }
 
     fun forwardSelectedSmsMessages() {
         Log.i(TAG, "=== FORWARD SELECTED SMS MESSAGES ===")
@@ -245,9 +242,8 @@ class SmsMainViewModel @Inject constructor(
         Log.i(TAG, "Using batch SMS forwarding for ${selectedSms.size} messages")
         simpleSmsForwardingService.forwardSmsMessagesBatchIfEnabled(selectedSms)
 
-        // Clear selection and exit delete mode after forwarding
+        // Clear selection after forwarding
         _selectedSmsMessages.value = emptySet()
-        _deleteMode.value = false
         _selectionMode.value = SelectionMode.NONE
 
         Log.i(TAG, "=== FORWARD INITIATED ===")
@@ -306,9 +302,9 @@ class SmsMainViewModel @Inject constructor(
                     Log.d(TAG, "Marked SMS ${sms.id} as forwarded")
                 }
 
-                // Clear selection and exit delete mode
+                // Clear selection
                 _selectedSmsMessages.value = emptySet()
-                _deleteMode.value = false
+                _selectionMode.value = SelectionMode.NONE
 
                 Log.i(TAG, "✅ Successfully marked ${smsToUpdate.size} SMS as forwarded")
             } catch (e: Exception) {
@@ -334,9 +330,9 @@ class SmsMainViewModel @Inject constructor(
                     Log.d(TAG, "Marked SMS ${sms.id} as not forwarded")
                 }
 
-                // Clear selection and exit delete mode
+                // Clear selection
                 _selectedSmsMessages.value = emptySet()
-                _deleteMode.value = false
+                _selectionMode.value = SelectionMode.NONE
 
                 Log.i(TAG, "✅ Successfully marked ${smsToUpdate.size} SMS as not forwarded")
             } catch (e: Exception) {

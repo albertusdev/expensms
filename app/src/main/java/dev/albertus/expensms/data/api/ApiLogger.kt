@@ -25,7 +25,8 @@ class ApiLogger @Inject constructor(
         responseBody: String? = null,
         errorMessage: String? = null,
         durationMs: Long? = null,
-        transactionId: String? = null
+        transactionId: String? = null,
+        smsMessageId: String? = null // NEW: SMS message reference
     ) {
         coroutineScope.launch {
             try {
@@ -33,6 +34,7 @@ class ApiLogger @Inject constructor(
                     id = UUID.randomUUID().toString(),
                     timestamp = Date(),
                     transactionId = transactionId,
+                    smsMessageId = smsMessageId, // NEW: Include SMS message ID
                     logType = logType,
                     endpoint = endpoint,
                     httpMethod = httpMethod,

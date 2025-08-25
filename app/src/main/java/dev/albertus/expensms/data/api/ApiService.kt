@@ -290,7 +290,7 @@ class ApiService @Inject constructor(
         return executeWithRetry(
             operation = { accessToken, shouldLog ->
                 Log.d(TAG, "Calling API client with token...")
-                apiClient.forwardSms(accessToken, smsData, smsMessage.id, shouldLog)
+                apiClient.forwardSms(accessToken, smsData, null, smsMessage.id, shouldLog) // Pass SMS ID as smsMessageId
             },
             operationName = "Forward SMS Message"
         )
@@ -326,7 +326,8 @@ class ApiService @Inject constructor(
         return executeWithRetry(
             operation = { accessToken, shouldLog ->
                 Log.d(TAG, "Calling batch API client with token...")
-                apiClient.forwardSmsBatch(accessToken, smsDataList, emptyList(), shouldLog)
+                val smsMessageIds = smsMessages.map { it.id }
+                apiClient.forwardSmsBatch(accessToken, smsDataList, emptyList(), smsMessageIds, shouldLog)
             },
             operationName = "Forward SMS Batch"
         )

@@ -226,6 +226,7 @@ class ApiClient @Inject constructor(
         accessToken: String,
         smsData: SmsForwardRequest,
         transactionId: String? = null,
+        smsMessageId: String? = null, // NEW: SMS message ID for logging
         shouldLog: Boolean = true
     ): ApiResult<String> {
         return withContext(Dispatchers.IO) {
@@ -257,7 +258,8 @@ class ApiClient @Inject constructor(
                         responseCode = response.code,
                         responseBody = responseBody,
                         durationMs = duration,
-                        transactionId = transactionId
+                        transactionId = transactionId,
+                        smsMessageId = smsMessageId // NEW: Include SMS message ID
                     )
                     ApiResult.Success("SMS forwarded successfully")
                 } else {
@@ -278,7 +280,8 @@ class ApiClient @Inject constructor(
                             responseBody = responseBody,
                             errorMessage = errorMessage,
                             durationMs = duration,
-                            transactionId = transactionId
+                            transactionId = transactionId,
+                            smsMessageId = smsMessageId // NEW: Include SMS message ID
                         )
                     }
 
@@ -294,7 +297,8 @@ class ApiClient @Inject constructor(
                         requestBody = requestBody,
                         errorMessage = "Network error: ${e.message}",
                         durationMs = duration,
-                        transactionId = transactionId
+                        transactionId = transactionId,
+                        smsMessageId = smsMessageId // NEW: Include SMS message ID
                     )
                 }
                 ApiResult.NetworkError
@@ -309,7 +313,8 @@ class ApiClient @Inject constructor(
                         requestBody = requestBody,
                         errorMessage = errorMsg,
                         durationMs = duration,
-                        transactionId = transactionId
+                        transactionId = transactionId,
+                        smsMessageId = smsMessageId // NEW: Include SMS message ID
                     )
                 }
                 ApiResult.Error(errorMsg)
@@ -321,6 +326,7 @@ class ApiClient @Inject constructor(
         accessToken: String,
         smsDataList: List<SmsForwardRequest>,
         transactionIds: List<String> = emptyList(),
+        smsMessageIds: List<String> = emptyList(), // NEW: SMS message IDs for logging
         shouldLog: Boolean = true
     ): ApiResult<SmsBatchForwardResponse> {
         return withContext(Dispatchers.IO) {
@@ -354,7 +360,8 @@ class ApiClient @Inject constructor(
                         responseCode = response.code,
                         responseBody = responseBody,
                         durationMs = duration,
-                        transactionId = transactionIds.joinToString(",")
+                        transactionId = transactionIds.joinToString(","),
+                        smsMessageId = smsMessageIds.joinToString(",") // NEW: Include SMS message IDs
                     )
                     ApiResult.Success(batchResponse)
                 } else {
@@ -375,7 +382,8 @@ class ApiClient @Inject constructor(
                             responseBody = responseBody,
                             errorMessage = errorMessage,
                             durationMs = duration,
-                            transactionId = transactionIds.joinToString(",")
+                            transactionId = transactionIds.joinToString(","),
+                            smsMessageId = smsMessageIds.joinToString(",") // NEW: Include SMS message IDs
                         )
                     }
                     ApiResult.Error(errorMessage, response.code.toString())
@@ -390,7 +398,8 @@ class ApiClient @Inject constructor(
                         requestBody = requestBody,
                         errorMessage = "Network error: ${e.message}",
                         durationMs = duration,
-                        transactionId = transactionIds.joinToString(",")
+                        transactionId = transactionIds.joinToString(","),
+                        smsMessageId = smsMessageIds.joinToString(",") // NEW: Include SMS message IDs
                     )
                 }
                 ApiResult.NetworkError
@@ -405,7 +414,8 @@ class ApiClient @Inject constructor(
                         requestBody = requestBody,
                         errorMessage = errorMsg,
                         durationMs = duration,
-                        transactionId = transactionIds.joinToString(",")
+                        transactionId = transactionIds.joinToString(","),
+                        smsMessageId = smsMessageIds.joinToString(",") // NEW: Include SMS message IDs
                     )
                 }
                 ApiResult.Error(errorMsg)

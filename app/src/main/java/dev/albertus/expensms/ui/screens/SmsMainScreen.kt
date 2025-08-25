@@ -39,7 +39,6 @@ fun SmsMainScreen(
 ) {
     val filteredSmsMessages by viewModel.filteredSmsMessages.collectAsState()
     val selectedSmsMessages by viewModel.selectedSmsMessages.collectAsState()
-    val deleteMode by viewModel.deleteMode.collectAsState()
     val selectionMode by viewModel.selectionMode.collectAsState()
     val isSyncing by viewModel.isSyncing.collectAsState()
 
@@ -47,7 +46,6 @@ fun SmsMainScreen(
     val foldableInfo = rememberFoldableInfo()
     val isWideScreen = shouldUseTwoPaneLayout()
 
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
     var showForwardConfirmation by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
@@ -66,7 +64,6 @@ fun SmsMainScreen(
             TopAppBar(
                 title = {
                     when (selectionMode) {
-                        SelectionMode.DELETE -> Text("${selectedSmsMessages.size} selected")
                         SelectionMode.MULTI_SELECT -> Text("${selectedSmsMessages.size} selected")
                         else -> Text("SMS Messages")
                     }
@@ -85,47 +82,7 @@ fun SmsMainScreen(
                     }
                 },
                 actions = {
-                    if (selectionMode == SelectionMode.DELETE) {
-                        // Select all/deselect all button
-                        val allSelected = selectedSmsMessages.size == filteredSmsMessages.values.flatten().size
-                        IconButton(onClick = {
-                            if (allSelected) {
-                                viewModel.deselectAllSmsMessages()
-                            } else {
-                                viewModel.selectAllFilteredSmsMessages()
-                            }
-                        }) {
-                            Icon(
-                                if (allSelected) Icons.Default.CheckBoxOutlineBlank else Icons.Default.CheckBox,
-                                contentDescription = if (allSelected) "Deselect all" else "Select all"
-                            )
-                        }
-
-                        // Forward button (only show if bank SMS messages are selected)
-                        if (bankCount > 0) {
-                            IconButton(onClick = { showForwardConfirmation = true }) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Forward selected bank SMS messages"
-                                )
-                            }
-                        }
-
-                        // Mark as forwarded button
-                        IconButton(onClick = { viewModel.markSelectedAsForwarded() }) {
-                            Icon(Icons.Default.Check, contentDescription = "Mark as forwarded")
-                        }
-
-                        // Mark as not forwarded button
-                        IconButton(onClick = { viewModel.markSelectedAsNotForwarded() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Mark as not forwarded")
-                        }
-
-                        // Delete button
-                        IconButton(onClick = { showDeleteConfirmation = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete selected")
-                        }
-                    } else if (selectionMode == SelectionMode.MULTI_SELECT) {
+                    if (selectionMode == SelectionMode.MULTI_SELECT) {
                         // Multi-select mode actions
                         // Select all/deselect all button
                         val allSelected = selectedSmsMessages.size == filteredSmsMessages.values.flatten().size
@@ -152,24 +109,26 @@ fun SmsMainScreen(
                             }
                         }
 
+                        // Select All Unforwarded button
+                        IconButton(onClick = { viewModel.selectAllUnforwarded() }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Select all unforwarded")
+                        }
+
                         // Mark as forwarded button
                         IconButton(onClick = { viewModel.markSelectedAsForwarded() }) {
-                            Icon(Icons.Default.Check, contentDescription = "Mark as forwarded")
+                            Icon(Icons.Default.CheckCircle, contentDescription = "Mark as forwarded")
                         }
 
                         // Mark as not forwarded button
                         IconButton(onClick = { viewModel.markSelectedAsNotForwarded() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Mark as not forwarded")
+                            Icon(Icons.Default.RadioButtonUnchecked, contentDescription = "Mark as not forwarded")
                         }
 
-                        // Delete button
-                        IconButton(onClick = { viewModel.setSelectionMode(SelectionMode.DELETE) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Switch to delete mode")
-                        }
+
                     } else {
                         // Only keep essential actions in the app bar
-                        IconButton(onClick = { viewModel.setDeleteMode(true) }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete mode")
+                        IconButton(onClick = { viewModel.setSelectionMode(SelectionMode.MULTI_SELECT) }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Multi-select mode")
                         }
                         IconButton(onClick = { viewModel.refreshSmsMessages() }) {
                             Icon(Icons.Default.Refresh, contentDescription = "Refresh SMS")
@@ -332,29 +291,7 @@ fun SmsMainScreen(
         }
     }
 
-    // Delete confirmation dialog
-    if (showDeleteConfirmation) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
-            title = { Text("Delete SMS Messages") },
-            text = { Text("Are you sure you want to delete ${selectedSmsMessages.size} SMS message(s)? This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteSelectedSmsMessages()
-                        showDeleteConfirmation = false
-                    }
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
+
 
     // Forward confirmation dialog
     if (showForwardConfirmation) {

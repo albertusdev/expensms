@@ -31,8 +31,7 @@ interface SmsMessageDao {
     @Query("UPDATE sms_messages SET is_forwarded = :isForwarded, forwarded_at = :forwardedAt WHERE id IN (:ids)")
     suspend fun updateForwardingStatus(ids: List<String>, isForwarded: Boolean, forwardedAt: java.util.Date?)
 
-    @Query("DELETE FROM sms_messages WHERE id IN (:ids)")
-    suspend fun deleteSmsMessages(ids: List<String>)
+
 
     @Query("SELECT COUNT(*) FROM sms_messages WHERE status = :status")
     suspend fun getSmsMessageCount(status: SmsStatus = SmsStatus.ACTIVE): Int

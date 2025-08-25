@@ -59,11 +59,7 @@ class SmsMessageRepository @Inject constructor(
         }
     }
 
-    suspend fun deleteSmsMessages(ids: List<String>) {
-        withContext(Dispatchers.IO) {
-            smsMessageDao.deleteSmsMessages(ids)
-        }
-    }
+
 
     suspend fun getSmsMessageCount(): Int {
         return withContext(Dispatchers.IO) {

@@ -12,6 +12,7 @@ data class ApiLog(
     @PrimaryKey @ColumnInfo(name = "id") val id: String,
     @ColumnInfo(name = "timestamp") val timestamp: Date,
     @ColumnInfo(name = "transaction_id") val transactionId: String?,
+    @ColumnInfo(name = "sms_message_id") val smsMessageId: String?, // NEW: Reference to SMS message
     @ColumnInfo(name = "log_type") val logType: ApiLogType,
     @ColumnInfo(name = "endpoint") val endpoint: String,
     @ColumnInfo(name = "http_method") val httpMethod: String,
@@ -37,4 +38,27 @@ data class ApiLogWithTransaction(
         entityColumn = "id"
     )
     val transaction: Transaction?
+)
+
+data class ApiLogWithSmsMessage(
+    @Embedded val apiLog: ApiLog,
+    @Relation(
+        parentColumn = "sms_message_id",
+        entityColumn = "id"
+    )
+    val smsMessage: SmsMessage?
+)
+
+data class ApiLogWithRelations(
+    @Embedded val apiLog: ApiLog,
+    @Relation(
+        parentColumn = "transaction_id",
+        entityColumn = "id"
+    )
+    val transaction: Transaction?,
+    @Relation(
+        parentColumn = "sms_message_id",
+        entityColumn = "id"
+    )
+    val smsMessage: SmsMessage?
 )
